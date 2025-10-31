@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ballistic_angle_solver</name>
+  <version>0.0.1</version>
+  <description>Ballistic angle calculation for 7v7 map</description>
+  <maintainer email="user@todo.todo">TODO: Maintainer</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>std_srvs</depend>
+  <export>
+  <build_type>ament_cmake</build_type>
+  </export>
+</package>
