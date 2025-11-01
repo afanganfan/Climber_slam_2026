@@ -45,14 +45,18 @@ install(TARGETS
 )
 
 
-add_executable(talker src/talker.cpp)
-ament_target_dependencies(talker rclcpp std_msgs geometry_msgs serial nav2_msgs rclcpp_action)
+add_executable(talker_seven src/talker_seven.cpp)
+ament_target_dependencies(talker_seven rclcpp std_msgs geometry_msgs serial nav2_msgs rclcpp_action)
+
+add_executable(talker_three src/talker_three.cpp)
+ament_target_dependencies(talker_three rclcpp std_msgs geometry_msgs serial nav2_msgs rclcpp_action)
 
 add_executable(lis src/lis.cpp)
 ament_target_dependencies(lis rclcpp message_filters serial std_msgs)
 
 install(TARGETS
-  talker
+  talker_seven
+  talker_three
   lis
   DESTINATION lib/${PROJECT_NAME}
 )
