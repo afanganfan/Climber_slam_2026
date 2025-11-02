@@ -20,7 +20,7 @@ using std::placeholders::_1;
 struct DownlinkData
 {
     // 1. 全局比赛信息
-    uint32_t match_time; // 比赛时间（单位：秒，0~4294秒）- 4字节
+    uint32_t match_time; // 比赛时间（单位：秒， - 4字节
     int16_t score_diff;  // 比分差（我方得分-敌方得分，支持负数）- 2字节
 
     // 2. 我方机器人数据（Hero/Infantry/Sentry）
