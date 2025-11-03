@@ -136,7 +136,7 @@ private:
                           const uint16_t new_our_sentry)
     {
         Command cmd = {FRAME_HEADER, 0x00, 0x0000, 0x00, FRAME_TAIL};
-
+        
         // 7V7模式：按自身hp判断
         if (data_type == DATA_TYPE_SEVEN)
         {
@@ -144,30 +144,44 @@ private:
             if (new_hp < 100)
             {
                 cmd.cmd_type = 0x01;
-                cmd.param = htons(0x0001); // 紧急避险指令
+                cmd.param = htons(0x0001); // 回家
             }
             // 条件2：100 < hp < 200，且hp下降（缓慢掉血）
             else if (new_hp > 100 && new_hp < 200 && new_hp < old_seven_hp_)
             {
                 cmd.cmd_type = 0x02;
-                cmd.param = htons(0x0002); // 血量维持指令
+                cmd.param = htons(0x0002); // 去回防点
+            }
+            else if (time < 60 && ((0 < score_diff < 60) || (0 > score_diff > (-60))))
+            {
+                cmd.cmd_type = 0x03;
+                cmd.param = htons(0x0003); // 去增益点
             }
         }
         // 3V3模式：仅按我方哨兵血量判断
         else if (data_type == DATA_TYPE_THREE)
         {
+            uint32_t time = ntohl(three_data.time);
+            int16_t score_diff = ntohs(three_data.score_diff);
             // 条件1：我方哨兵血量<100（紧急低血量）
             if (new_our_sentry < 100)
             {
-                cmd.cmd_type = 0x03;
-                cmd.param = htons(0x0003); // 我方哨兵紧急防护
+                cmd.cmd_type = 0x01;
+                cmd.param = htons(0x0001); // 回家
             }
             // 条件2：我方哨兵100<血量<200，且正在下降（缓慢掉血）
             else if (new_our_sentry > 100 && new_our_sentry < 200 && new_our_sentry < old_three_our_sentry_)
             {
-                cmd.cmd_type = 0x04;
-                cmd.param = htons(0x0004); // 我方哨兵血量维持
+                cmd.cmd_type = 0x02;
+                cmd.param = htons(0x0002); // 去回防点
             }
+            else if (time < 60 && score_diff < 60)
+            {
+                cmd.cmd_type = 0x03;
+                cmd.param = htons(0x0003); // 去增益点
+            }
+            else if ()
+
         }
 
         // 计算指令校验和
