@@ -109,7 +109,7 @@ private:
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
     rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr cmd_pub_;
 
-    // 核心旧数据（仅存储需对比的字段）
+    // 存储旧数据
     uint16_t old_seven_hp_;         // 7V7：旧自身血量
     uint16_t old_three_our_sentry_; // 3V3：旧我方哨兵血量
 
@@ -130,14 +130,14 @@ private:
         return serial_port_.read(buf, len) == len;
     }
 
-    // 决策函数：仅关注我方数据
     Command make_decision(const string &data_type,
                           const uint16_t new_hp,
-                          const uint16_t new_our_sentry)
+                          const uint16_t new_our_sentry,
+                          const DownlinkDataThree *three_data = nullptr) 
     {
         Command cmd = {FRAME_HEADER, 0x00, 0x0000, 0x00, FRAME_TAIL};
-        
-        // 7V7模式：按自身hp判断
+
+        // 7V7模式
         if (data_type == DATA_TYPE_SEVEN)
         {
             // 条件1：hp少于100（紧急低血量）
@@ -152,17 +152,14 @@ private:
                 cmd.cmd_type = 0x02;
                 cmd.param = htons(0x0002); // 去回防点
             }
-            else if (time < 60 && ((0 < score_diff < 60) || (0 > score_diff > (-60))))
-            {
-                cmd.cmd_type = 0x03;
-                cmd.param = htons(0x0003); // 去增益点
-            }
         }
-        // 3V3模式：仅按我方哨兵血量判断
-        else if (data_type == DATA_TYPE_THREE)
+        // 3V3模式
+        else if (data_type == DATA_TYPE_THREE && three_data != nullptr) // 增加three_data非空判断
         {
-            uint32_t time = ntohl(three_data.time);
-            int16_t score_diff = ntohs(three_data.score_diff);
+
+            uint32_t time = ntohl(three_data->match_time);
+            int16_t score_diff = ntohs(three_data->score_diff);
+
             // 条件1：我方哨兵血量<100（紧急低血量）
             if (new_our_sentry < 100)
             {
@@ -175,16 +172,14 @@ private:
                 cmd.cmd_type = 0x02;
                 cmd.param = htons(0x0002); // 去回防点
             }
-            else if (time < 60 && score_diff < 60)
+
+            else if (time < 60 && ((score_diff > 0 && score_diff < 60) || (score_diff < 0 && score_diff > -60)))
             {
                 cmd.cmd_type = 0x03;
                 cmd.param = htons(0x0003); // 去增益点
             }
-            else if ()
-
         }
 
-        // 计算指令校验和
         vector<uint8_t> cmd_data = {
             cmd.header, cmd.cmd_type,
             static_cast<uint8_t>((cmd.param >> 8) & 0xFF),
@@ -210,17 +205,14 @@ private:
         // 串口下发
         serial_port_.write(cmd_buf);
 
-        // ROS发布指令
         auto msg = std::make_unique<std_msgs::msg::UInt8MultiArray>();
         msg->data = cmd_buf;
         cmd_pub_->publish(std::move(msg));
 
-        // 日志打印
         RCLCPP_INFO(get_logger(), "Sent Command: Type=0x%02X, Param=0x%04X",
                     cmd.cmd_type, ntohs(cmd.param));
     }
 
-    // 解析7V7数据：提取hp并对比
     void parse_seven()
     {
         vector<uint8_t> buf;
@@ -244,17 +236,13 @@ private:
             return;
         }
 
-        // 提取新hp（网络字节序转主机字节序）
         uint16_t new_hp = ntohs(data->hp);
 
-        // 生成并发送指令
-        Command cmd = make_decision(DATA_TYPE_SEVEN, new_hp, 0);
+        Command cmd = make_decision(DATA_TYPE_SEVEN, new_hp, 0, nullptr);
         send_command(cmd);
 
-        // 更新旧hp
         old_seven_hp_ = new_hp;
 
-        // 发布解析数据
         auto msg = std::make_unique<std_msgs::msg::String>();
         msg->data = "Seven|" + to_string(ntohl(data->time)) + "|" +
                     to_string(data->enemy_outpost_alive) + "|" + to_string(ntohs(data->base_hp_diff)) + "|" +
@@ -264,7 +252,6 @@ private:
         pub_->publish(std::move(msg));
     }
 
-    // 解析3V3数据：仅提取我方哨兵血量并对比
     void parse_three()
     {
         vector<uint8_t> buf;
@@ -291,8 +278,7 @@ private:
         // 提取我方哨兵新血量（网络字节序转主机字节序）
         uint16_t new_our_sentry = ntohs(data->our_sentry_blood);
 
-        // 生成并发送指令
-        Command cmd = make_decision(DATA_TYPE_THREE, 0, new_our_sentry);
+        Command cmd = make_decision(DATA_TYPE_THREE, 0, new_our_sentry, data);
         send_command(cmd);
 
         // 更新我方哨兵旧血量
