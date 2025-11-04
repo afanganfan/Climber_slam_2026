@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.toml": "toml",
         "*.tcc": "cpp",
         "ostream": "cpp",
         "cctype": "cpp",
@@ -73,6 +74,7 @@
         "cfenv": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "codecvt": "cpp"
     }
 }

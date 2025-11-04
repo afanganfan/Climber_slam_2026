@@ -49,7 +49,7 @@ struct DownlinkDataThree
     uint8_t enemy_hero_level;      // 敌方英雄等级
     uint16_t enemy_infantry_blood; // 敌方步兵血量
     uint8_t enemy_infantry_level;  // 敌方步兵等级
-    uint16_t enemy_sentry_blood;   // （已弃用，仅为结构体兼容保留）
+    uint16_t enemy_sentry_blood;   // 敌方哨兵血量
     uint8_t checksum;
     uint8_t frame_tail; // 帧尾
 };
@@ -275,23 +275,21 @@ private:
             return;
         }
 
-        // 提取我方哨兵新血量（网络字节序转主机字节序）
         uint16_t new_our_sentry = ntohs(data->our_sentry_blood);
 
         Command cmd = make_decision(DATA_TYPE_THREE, 0, new_our_sentry, data);
         send_command(cmd);
 
-        // 更新我方哨兵旧血量
         old_three_our_sentry_ = new_our_sentry;
 
-        // 发布解析数据（已移除敌方哨兵血量相关内容）
+        // 发布解析数据
         auto msg = std::make_unique<std_msgs::msg::String>();
         msg->data = "Three|" + to_string(ntohl(data->match_time)) + "|" + to_string(ntohs(data->score_diff)) + "|" +
                     to_string(ntohs(data->our_hero_blood)) + "|" + to_string(data->our_hero_level) + "|" +
                     to_string(ntohs(data->our_infantry_blood)) + "|" + to_string(data->our_infantry_level) + "|" +
                     to_string(new_our_sentry) + "|" + to_string(ntohs(data->enemy_hero_blood)) + "|" +
                     to_string(data->enemy_hero_level) + "|" + to_string(ntohs(data->enemy_infantry_blood)) + "|" +
-                    to_string(data->enemy_infantry_level);
+                    to_string(data->enemy_infantry_level) + "|" + to_string(ntohs(data->enemy_sentry_blood));
         pub_->publish(std::move(msg));
     }
 
