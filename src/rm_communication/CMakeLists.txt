@@ -32,7 +32,7 @@ ament_target_dependencies(receive
   serial         # 串口通信必需
 )
 # 链接自定义action接口（若receive用到则保留，否则注释）
-# rosidl_target_interfaces(receive ${PROJECT_NAME} "rosidl_typesupport_cpp")
+rosidl_target_interfaces(receive ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 # 3.2 订阅导航消息节点
 add_executable(sub_from_nav src/sub_from_nav.cpp)
@@ -65,6 +65,13 @@ ament_target_dependencies(talker_three
   rclcpp_action
 )
 
+# serial_echo: simple node that prints raw serial data to terminal
+add_executable(serial_echo src/serial_echo.cpp)
+ament_target_dependencies(serial_echo
+  rclcpp
+  serial
+)
+
 # 3.4 监听节点
 add_executable(lis src/lis.cpp)
 ament_target_dependencies(lis
@@ -89,6 +96,7 @@ install(TARGETS
   sub_from_nav
   talker_seven
   talker_three
+  serial_echo
   lis
   monitor
   DESTINATION lib/${PROJECT_NAME}
