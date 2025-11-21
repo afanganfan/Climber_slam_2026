@@ -15,7 +15,7 @@ find_package(serial REQUIRED)  # 串口相关目标用到
 find_package(geometry_msgs REQUIRED)  # 涉及Twist等消息的目标用到
 find_package(nav2_msgs REQUIRED)  # 自定义action依赖
 find_package(rosidl_default_generators REQUIRED)  # 生成action接口
-
+find_package(serial REQUIRED)
 # 2. 生成自定义接口（action）
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/NavigateToPose.action"
@@ -38,6 +38,7 @@ rosidl_target_interfaces(receive ${PROJECT_NAME} "rosidl_typesupport_cpp")
 add_executable(sub_from_nav src/sub_from_nav.cpp)
 ament_target_dependencies(sub_from_nav
   rclcpp
+  std_msgs
   rclcpp_action  # 若用到action通信
   nav2_msgs      # 导航相关消息
 )
