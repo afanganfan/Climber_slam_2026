@@ -98,7 +98,6 @@ private:
     uint8_t calc_checksum(const std::vector<uint8_t> &packet)
     {
         uint8_t sum = 0;
-        // 校验范围：0 到 size-2 (即去除 checksum 和 tail)
         for (size_t i = 0; i < packet.size() - 2; ++i)
         {
             sum ^= packet[i];
@@ -108,7 +107,6 @@ private:
 
     void timer_callback()
     {
-        // 1. 自动重连机制 (USB 拔插保护)
         if (!is_serial_open_)
         {
             try
