@@ -1,12 +1,9 @@
 #include "talker.hpp"
 
-// 使用命名空间别名，避免在整个文件中写 `nav2_msgs::action::NavigateToPose`
 using Action = nav2_msgs::action::NavigateToPose;
 
-// --- 构造函数实现 ---
 ReceiveNode::ReceiveNode() : Node("receive_node"), is_serial_open_(false)
 {
-    // 1. 声明与获取参数
     this->declare_parameter("port_name", "/dev/ttyUSB0");
     this->declare_parameter("baud_rate", 115200);
     this->declare_parameter("data_type", DATA_TYPE_THREE);
@@ -15,7 +12,6 @@ ReceiveNode::ReceiveNode() : Node("receive_node"), is_serial_open_(false)
     baud_rate_ = this->get_parameter("baud_rate").as_int();
     data_type_ = this->get_parameter("data_type").as_string();
 
-    // 2. 配置串口
     serial_port_.setPort(port_name_);
     serial_port_.setBaudrate(baud_rate_);
     serial::Timeout timeout = serial::Timeout::simpleTimeout(100);
@@ -85,7 +81,6 @@ void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr ms
 // --- send_navigation_goal 实现 (发送导航目标) ---
 void ReceiveNode::send_navigation_goal(double x, double y)
 {
-    // ... (保持原有的实现，注意 Action 类型别名)
     if (!action_client_->wait_for_action_server(std::chrono::seconds(1)))
     {
         RCLCPP_WARN(this->get_logger(), "Navigate action server not available");
@@ -101,7 +96,6 @@ void ReceiveNode::send_navigation_goal(double x, double y)
     goal_msg.pose = pose;
 
     auto send_goal_options = rclcpp_action::Client<Action>::SendGoalOptions();
-    // ... (省略 Action 回调的详细实现，保持原样)
     send_goal_options.goal_response_callback =
         [this](rclcpp_action::ClientGoalHandle<Action>::SharedPtr goal_handle)
     {
@@ -144,18 +138,16 @@ void ReceiveNode::send_navigation_goal(double x, double y)
     action_client_->async_send_goal(goal_msg, send_goal_options);
 }
 
-// --- timer_callback 实现 (串口 IO 循环) ---
 void ReceiveNode::timer_callback()
 {
-    // ... (保持原有的实现)
-    // 1. 自动重连机制 (USB 拔插保护)
+
     if (!is_serial_open_)
     {
         try
         {
             serial_port_.open();
             is_serial_open_ = true;
-            RCLCPP_INFO(this->get_logger(), "Serial port opened successfully.");
+            RCLCPP_INFO(this->get_logger(), "串口成功打开");
         }
         catch (const serial::IOException &e)
         {
@@ -168,7 +160,6 @@ void ReceiveNode::timer_callback()
         }
     }
 
-    // 2. 读取与分发 (IO 异常保护)
     try
     {
         size_t available = serial_port_.available();
@@ -179,7 +170,6 @@ void ReceiveNode::timer_callback()
             buffer_.insert(buffer_.end(), temp.begin(), temp.end());
         }
 
-        // 根据参数选择解析模式
         if (data_type_ == DATA_TYPE_SEVEN)
         {
             parse_seven();
@@ -203,11 +193,9 @@ void ReceiveNode::timer_callback()
         is_serial_open_ = false;
     }
 }
-
-// --- parse_three 实现 ---
 void ReceiveNode::parse_three()
 {
-    // ... (保持原有的实现)
+
     if (buffer_.size() > 1024)
         buffer_.erase(buffer_.begin(), buffer_.end() - LEN_THREE * 2);
 
