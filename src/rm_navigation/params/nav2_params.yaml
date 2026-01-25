@@ -1,0 +1,501 @@
+# ========================
+# AMCL (Adaptive Monte Carlo Localization) 配置
+# 自适应蒙特卡洛定位，用于机器人全局定位
+# ========================
+amcl:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+    alpha1: 0.2                                  # 旋转到旋转的噪声参数 (rad/rad)
+    alpha2: 0.2                                  # 旋转到平移的噪声参数 (m/rad)
+    alpha3: 0.2                                  # 平移到旋转的噪声参数 (rad/m)
+    alpha4: 0.2                                  # 平移到平移的噪声参数 (m/m)
+    alpha5: 0.2                                  # 平移到平移的噪声参数 (m/m)
+    base_frame_id: "base_link"                   # 机器人基座坐标系
+    beam_skip_distance: 0.5                      # 光束跳过距离 (m)
+    beam_skip_error_threshold: 0.9               # 光束跳过误差阈值
+    beam_skip_threshold: 0.3                     # 光束跳过阈值
+    do_beamskip: false                           # 是否启用光束跳过
+    global_frame_id: "map"                       # 全局地图坐标系
+    lambda_short: 0.1                            # 短距离激光分布参数
+    laser_likelihood_max_dist: 2.0               # 激光似然字段最大距离 (m)
+    laser_max_range: 20.0                       # 激光最大测量范围 (m)
+    laser_min_range: -1.0                        # 激光最小测量范围 (m)
+    laser_model_type: "likelihood_field"         # 激光模型类型 (likelihood_field 或 beam)
+    max_beams: 100                                # 每次扫描使用的最大激光束数
+    max_particles: 2000                          # 最大粒子数
+    min_particles: 500                           # 最小粒子数
+    odom_frame_id: "odom"                        # 里程计坐标系
+    pf_err: 0.05                                 # 粒子滤波器误差阈值
+    pf_z: 0.99                                   # 粒子滤波器质量参数
+    recovery_alpha_fast: 0.0                     # 快速恢复参数 (均匀分布混合率)
+    recovery_alpha_slow: 0.0                     # 慢速恢复参数 (均匀分布混合率)
+    resample_interval: 1                         # 重采样间隔 (扫描数)
+    robot_model_type: "nav2_amcl::OmniMotionModel"  # 机器人运动模型 (全向运动模型)
+    save_pose_rate: 0.5                          # 保存姿态的频率 (Hz)
+    sigma_hit: 0.2                               # 激光测量命中的标准差 (m)
+    tf_broadcast: true                           # 是否广播tf变换
+    transform_tolerance: 1.0                     # 变换容差 (s)
+    update_min_a: 0.2                            # 更新时最小旋转 (rad)
+    update_min_d: 0.25                           # 更新时最小平移 (m)
+    z_hit: 0.5                                   # 命中部分的混合权重
+    z_max: 0.05                                  # 最大范围部分的混合权重
+    z_rand: 0.5                                  # 随机部分的混合权重
+    z_short: 0.05                                # 短距离部分的混合权重
+    scan_topic: scan                             # 激光扫描话题名称
+
+# ========================
+# AMCL 地图客户端配置
+# ========================
+amcl_map_client:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+
+# ========================
+# AMCL RCL CPP 节点配置
+# ========================
+amcl_rclcpp_node:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+
+# ========================
+# BT导航器 (行为树导航) 配置
+# 使用行为树进行导航任务规划和执行
+# ========================
+bt_navigator:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+    global_frame: map                            # 全局参考坐标系
+    robot_base_frame: base_link                  # 机器人基座坐标系
+    odom_topic: /odom                            # 里程计话题
+    bt_loop_duration: 10                         # 行为树循环间隔 (ms)
+    default_server_timeout: 20                   # 默认服务器超时 (s)
+    enable_groot_monitoring: True                # 是否启用Groot行为树监控
+    plugin_lib_names:                            # 加载的行为树插件库列表
+    - nav2_compute_path_to_pose_action_bt_node
+    - nav2_compute_path_through_poses_action_bt_node
+    - nav2_follow_path_action_bt_node
+    - nav2_back_up_action_bt_node
+    - nav2_spin_action_bt_node
+    - nav2_wait_action_bt_node
+    - nav2_clear_costmap_service_bt_node
+    - nav2_is_stuck_condition_bt_node
+    - nav2_goal_reached_condition_bt_node
+    - nav2_goal_updated_condition_bt_node
+    - nav2_initial_pose_received_condition_bt_node
+    - nav2_reinitialize_global_localization_service_bt_node
+    - nav2_rate_controller_bt_node
+    - nav2_distance_controller_bt_node
+    - nav2_speed_controller_bt_node
+    - nav2_truncate_path_action_bt_node
+    - nav2_goal_updater_node_bt_node
+    - nav2_recovery_node_bt_node
+    - nav2_pipeline_sequence_bt_node
+    - nav2_round_robin_node_bt_node
+    - nav2_transform_available_condition_bt_node
+    - nav2_time_expired_condition_bt_node
+    - nav2_distance_traveled_condition_bt_node
+    - nav2_single_trigger_bt_node
+    - nav2_is_battery_low_condition_bt_node
+    - nav2_navigate_through_poses_action_bt_node
+    - nav2_navigate_to_pose_action_bt_node
+    - nav2_remove_passed_goals_action_bt_node
+    - nav2_planner_selector_bt_node
+    - nav2_controller_selector_bt_node
+    - nav2_goal_checker_selector_bt_node
+
+# ========================
+# BT导航器 RCL CPP 节点配置
+# ========================
+bt_navigator_rclcpp_node:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+
+# ========================
+# 控制器服务器 (局部路径跟踪) 配置
+# 用于计算速度命令跟踪全局路径
+# ========================
+controller_server:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+    controller_frequency: 20.0                    # 控制器运行频率 (Hz)
+    min_x_velocity_threshold: 0.001              # X方向最小速度阈值 (m/s)
+    min_y_velocity_threshold: 0.001                # Y方向最小速度阈值 (m/s)
+    min_theta_velocity_threshold: 0.001          # 角速度最小阈值 (rad/s)
+    failure_tolerance: 0.3                       # 失败容差
+    progress_checker_plugin: "progress_checker"  # 进度检查插件名称
+    goal_checker_plugins: ["general_goal_checker"] # 目标检查插件列表
+    controller_plugins: ["FollowPath"]            # 路径跟踪控制器插件
+
+    # ========================
+    # 进度检查器参数
+    # 检测机器人是否在向目标移动
+    # ========================
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.2              # 需要的移动半径 (m)
+      movement_time_allowance: 6.0              # 允许的移动时间 (s)
+
+    # ========================
+    # 目标检查器参数
+    # 检测是否到达目标位置
+    # ========================
+    general_goal_checker:
+      stateful: True                             # 是否保存状态
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25                    # XY平面目标容差 (m)
+      yaw_goal_tolerance: 0.8                   # 偏航角目标容差 (rad)
+    
+    # ========================
+    # DWB (动态窗口法) 局部路径规划器参数
+    # 用于实时路径跟踪和碰撞避免
+    # ========================
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: False            # 是否输出轨迹调试信息
+      min_vel_x: -2.5                            # X方向最小速度 (m/s)
+      min_vel_y: -2.5                            # Y方向最小速度 (m/s)
+      max_vel_x: 2.5                             # X方向最大速度 (m/s)
+      max_vel_y: 2.5                             # Y方向最大速度 (m/s)
+      max_vel_theta: 0.0                        # 最大角速度 (rad/s)
+      min_speed_xy: -8.0                         # XY最小速度 (m/s)
+      max_speed_xy: 8.0                          # XY最大速度 (m/s)
+      min_speed_theta: 0.0                     # 最小角速度 (rad/s)
+      acc_lim_x: 5.0                             # X方向最大加速度 (m/s²)
+      acc_lim_y: 5.0                             # Y方向最大加速度 (m/s²)
+      acc_lim_theta: 15.0                        # 最大角加速度 (rad/s²)
+      decel_lim_x: -5.0                          # X方向最大减速度 (m/s²)
+      decel_lim_y: -5.0                          # Y方向最大减速度 (m/s²)
+      decel_lim_theta: -15.0                     # 最大角减速度 (rad/s²)
+      vx_samples: 40                             # X方向速度采样点数
+      vy_samples: 40                             # Y方向速度采样点数
+      vtheta_samples: 20                         # 角速度采样点数
+      sim_time: 1.7                             # 轨迹模拟时长 (s)
+      linear_granularity: 0.05                   # 线性采样粒度 (m)
+      angular_granularity: 0.025                 # 角度采样粒度 (rad)
+      transform_tolerance: 0.2                   # 变换容差 (s)
+      xy_goal_tolerance: 0.25                    # XY目标容差 (m)
+      trans_stopped_velocity: 0.25               # 停止平移的速度阈值 (m/s)
+      short_circuit_trajectory_evaluation: True  # 是否短路轨迹评估
+      stateful: True                             # 是否保存状态
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]  # 评价函数列表
+      BaseObstacle.scale: 0.05                   # 基础障碍物评价函数权重
+      PathAlign.scale: 32.0                      # 路径对齐评价函数权重
+      PathAlign.forward_point_distance: 0.1      # 前瞻距离 (m)
+      GoalAlign.scale: 24.0                      # 目标对齐评价函数权重
+      GoalAlign.forward_point_distance: 0.1      # 前瞻距离 (m)
+      PathDist.scale: 32.0                       # 路径距离评价函数权重
+      GoalDist.scale: 24.0                       # 目标距离评价函数权重
+      RotateToGoal.scale: 32.0                   # 旋转至目标评价函数权重
+      RotateToGoal.slowing_factor: 5.0           # 旋转减速因子
+      RotateToGoal.lookahead_time: -1.0          # 前瞻时间 (-1 表示使用默认值)
+      shrink_horizon_backup: true                # 是否收缩地平线备份
+      shrink_horizon_min_duration: 10.0          # 收缩地平线最小持续时间 (s)
+      oscillation_recovery: true                 # 是否启用振荡恢复
+      oscillation_v_eps: 0.1                     # 振荡速度阈值 (m/s)
+      oscillation_omega_eps: 0.1                 # 振荡角速度阈值 (rad/s)
+      oscillation_recovery_min_duration: 10.0    # 振荡恢复最小持续时间 (s)
+      oscillation_filter_duration: 10.0          # 振荡过滤持续时间 (s)
+# ========================
+# 控制器服务器 RCL CPP 节点配置
+# ========================
+controller_server_rclcpp_node:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+
+# ========================
+# 本地代价地图 (Local Costmap) 配置
+# 用于机器人周围的局部障碍物映射
+# ========================
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 20.0                     # 代价地图更新频率 (Hz)
+      publish_frequency: 10.0                    # 代价地图发布频率 (Hz)
+      global_frame: map                          # 全局参考坐标系
+      robot_base_frame: base_link                # 机器人基座坐标系
+      use_sim_time: False                        # 是否使用仿真时间
+      rolling_window: true                       # 是否使用滚动窗口
+      width: 5                                   # 代价地图宽度 (m)
+      height: 5                                  # 代价地图高度 (m)
+      resolution: 0.05                           # 代价地图分辨率 (m/cell)
+      robot_radius: 0.2                          # 机器人半径 (m)
+      plugins: ["voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
+      
+      # ========================
+      # 膨胀层 - 在障碍物周围创建缓冲区
+      # ========================
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: True                            # 是否启用膨胀层
+        cost_scaling_factor: 8.0                 # 成本缩放因子
+        inflation_radius: 0.3                    # 膨胀半径 (m)
+      
+      # ========================
+      # 2D体素层 - 处理激光雷达扫描数据
+      # ========================
+      voxel2d_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True                            # 是否启用
+        publish_voxel_map: False                 # 是否发布体素地图
+        origin_z: 0.0                            # 原点Z坐标 (m)
+        z_resolution: 0.05                       # Z方向分辨率 (m/cell)
+        z_voxels: 16                             # Z方向体素数
+        max_obstacle_height: 1.8                 # 最大障碍物高度 (m)
+        mark_threshold: 0                        # 标记阈值 (体素数)
+        observation_sources: scan                # 观测数据源
+        scan:
+          topic: /scan                           # 激光扫描话题
+          raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
+          raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
+          clearing: True                         # 是否清除自由空间
+          marking: True                          # 是否标记障碍物
+          data_type: "LaserScan"                 # 数据类型
+      
+      # ========================
+      # 3D体素层 - 处理Livox点云数据
+      # ========================
+      voxel3d_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True                            # 是否启用
+        publish_voxel_map: False                 # 是否发布体素地图
+        origin_z: 0.0                            # 原点Z坐标 (m)
+        z_resolution: 0.05                       # Z方向分辨率 (m/cell)
+        z_voxels: 16                             # Z方向体素数
+        mark_threshold: 1                        # 标记阈值 (体素数)
+        observation_sources: livox               # 观测数据源
+        min_obstacle_height: 0.2                 # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+        max_obstacle_height: 1.8                 # 最大障碍物高度 (m)
+        livox:
+          topic: /livox/lidar/pointcloud         # Livox点云话题
+          raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
+          raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面点
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
+          clearing: True                         # 是否清除自由空间
+          marking: True                          # 是否标记障碍物
+          data_type: "PointCloud2"               # 数据类型
+      
+      static_layer:
+        map_subscribe_transient_local: True      # 订阅本地持久化地图
+      always_send_full_costmap: True             # 总是发送完整代价地图
+  
+  # 本地代价地图客户端配置
+  local_costmap_client:
+    ros__parameters:
+      use_sim_time: False                        # 是否使用仿真时间
+  
+  # 本地代价地图 RCL CPP 节点配置
+  local_costmap_rclcpp_node:
+    ros__parameters:
+      use_sim_time: False                        # 是否使用仿真时间
+
+# ========================
+# 全局代价地图 (Global Costmap) 配置
+# 用于整个环境的障碍物映射，包含静态地图
+# ========================
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 20.0                     # 代价地图更新频率 (Hz)
+      publish_frequency: 10.0                    # 代价地图发布频率 (Hz)
+      global_frame: map                          # 全局参考坐标系
+      robot_base_frame: base_link                # 机器人基座坐标系
+      use_sim_time: False                        # 是否使用仿真时间
+      robot_radius: 0.2                          # 机器人半径 (m)
+      resolution: 0.05                           # 代价地图分辨率 (m/cell)
+      track_unknown_space: true                  # 是否追踪未知空间
+      plugins: ["static_layer", "voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
+      
+      # ========================
+      # 2D体素层 - 处理激光雷达扫描
+      # ========================
+      voxel2d_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True                            # 是否启用
+        observation_sources: scan                # 观测数据源
+        scan:
+          topic: /scan                           # 激光扫描话题
+          raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
+          raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m)
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
+          clearing: True                         # 是否清除自由空间
+          marking: False                          # 是否标记障碍物
+          data_type: "LaserScan"                 # 数据类型
+      
+      # ========================
+      # 3D体素层 - 处理Livox点云
+      # ========================
+      voxel3d_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True                            # 是否启用
+        publish_voxel_map: False                 # 是否发布体素地图
+        origin_z: 0.0                            # 原点Z坐标 (m)
+        z_resolution: 0.05                       # Z方向分辨率 (m/cell)
+        z_voxels: 16                             # Z方向体素数
+        mark_threshold: 1                        # 标记阈值 (体素数)
+        observation_sources: livox               # 观测数据源
+        min_obstacle_height: 0.2                # 最小障碍物高度 (m)
+        max_obstacle_height: 2.0                 # 最大障碍物高度 (m)
+        livox:
+          topic: /livox/lidar/pointcloud         # Livox点云话题
+          raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
+          raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m)
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
+          clearing: True                         # 是否清除自由空间
+          marking: False                          # 是否标记障碍物
+          data_type: "PointCloud2"               # 数据类型
+      
+      # ========================
+      # 静态层 - 加载保存的静态地图
+      # ========================
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True      # 订阅本地持久化地图
+      
+      # ========================
+      # 膨胀层 - 在障碍物周围创建缓冲区
+      # ========================
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: True                            # 是否启用膨胀层
+        cost_scaling_factor: 8.0                 # 成本缩放因子
+        inflation_radius: 0.75                    # 膨胀半径 (m)
+      
+      always_send_full_costmap: True             # 总是发送完整代价地图
+  
+  # 全局代价地图客户端配置
+  global_costmap_client:
+    ros__parameters:
+      use_sim_time: False                        # 是否使用仿真时间
+  
+  # 全局代价地图 RCL CPP 节点配置
+  global_costmap_rclcpp_node:
+    ros__parameters:
+      use_sim_time: False                        # 是否使用仿真时间
+
+# ========================
+# 地图服务器配置
+# 用于加载和发布静态地图
+# ========================
+map_server:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+    yaml_filename: ""                            # 地图YAML文件路径
+
+# ========================
+# 地图保存器配置
+# 用于保存生成的地图为图像和YAML文件
+# ========================
+map_saver:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+    save_map_timeout: 5.0                        # 保存地图超时时间 (s)
+    free_thresh_default: 0.25                    # 自由空间阈值 (0-1, 0表示全黑)
+    occupied_thresh_default: 0.65                # 占用空间阈值 (0-1, 1表示全白)
+    map_subscribe_transient_local: True          # 订阅本地持久化地图
+
+# ========================
+# 路径规划服务器配置
+# 计算从机器人位置到目标点的全局路径
+# ========================
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 20.0             # 期望的路径规划频率 (Hz)
+    use_sim_time: False                          # 是否使用仿真时间
+    planner_plugins: ["GridBased"]               # 路径规划插件列表
+    
+    # ========================
+    # 基于栅格的路径规划器 (Navfn)
+    # ========================
+    GridBased:
+      plugin: "nav2_navfn_planner/NavfnPlanner"
+      tolerance: 0.5                             # 规划容差 (m)
+      use_astar: true                           # 是否使用A*算法 (false=Dijkstra)
+      allow_unknown: true                        # 是否允许规划经过未知区域
+
+# ========================
+# 恢复行为服务器配置
+# 当机器人陷入困境时执行恢复动作 (旋转、后退等)
+# ========================
+recoveries_server:
+  ros__parameters:
+    costmap_topic: local_costmap/costmap_raw    # 代价地图话题
+    footprint_topic: local_costmap/published_footprint  # 机器人足迹话题
+    cycle_frequency: 10.0                        # 恢复循环频率 (Hz)
+    recovery_plugins: ["spin", "backup", "wait"] # 恢复行为插件列表
+    
+    # ========================
+    # 旋转恢复 - 机器人原地旋转以逃脱困境
+    # ========================
+    spin:
+      plugin: "nav2_recoveries/Spin"
+    
+    # ========================
+    # 后退恢复 - 机器人向后移动
+    # ========================
+    backup:
+      plugin: "nav2_recoveries/BackUp"
+    
+    # ========================
+    # 等待恢复 - 机器人等待并重新规划
+    # ========================
+    wait:
+      plugin: "nav2_recoveries/Wait"
+    
+    global_frame: odom                           # 全局参考坐标系
+    robot_base_frame: base_link                  # 机器人基座坐标系
+    transform_timeout: 0.1                       # 变换容差 (s)
+    use_sim_time: False                          # 是否使用仿真时间
+    simulate_ahead_time: 2.0                     # 前瞻模拟时间 (s)
+    max_rotational_vel: 20.0                     # 最大旋转速度 (rad/s)
+    min_rotational_vel: 0.4                      # 最小旋转速度 (rad/s)
+    rotational_acc_lim: 10.0                     # 旋转加速度限制 (rad/s²)
+
+# ========================
+# 机器人状态发布器配置
+# 发布机器人的关节状态和TF变换
+# ========================
+robot_state_publisher:
+  ros__parameters:
+    use_sim_time: False                          # 是否使用仿真时间
+
+# ========================
+# 路点跟随器配置
+# 导航到多个连续路点
+# ========================
+waypoint_follower:
+  ros__parameters:
+    loop_rate: 20                                # 循环频率 (Hz)
+    stop_on_failure: false                       # 失败时是否停止
+    waypoint_task_executor_plugin: "wait_at_waypoint"  # 路点执行插件
+    
+    # ========================
+    # 在路点处等待插件
+    # ========================
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True                              # 是否启用
+      waypoint_pause_duration: 200               # 在路点等待时长 (ms)
+
+# ========================
+# 速度平滑器配置
+# 对速度命令进行平滑处理以实现平缓运动
+# ========================
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: True                           # 是否使用仿真时间
+    smoothing_frequency: 5.0                     # 平滑频率 (Hz)
+    scale_velocities: False                      # 是否缩放速度
+    feedback: "CLOSED_LOOP"                      # 反馈模式 (CLOSED_LOOP 或 OPEN_LOOP)
+    max_velocity: [2.5, 2.5, 12.0]              # 最大速度 [vx, vy, wz] (m/s, m/s, rad/s)
+    min_velocity: [-2.5, -2.5, -12.0]           # 最小速度 [vx, vy, wz] (m/s, m/s, rad/s)
+    max_accel: [3.0, 3.0, 10.0]                 # 最大加速度 [ax, ay, az] (m/s², m/s², rad/s²)
+    max_decel: [-3.0, -3.0, -10.0]              # 最大减速度 [ax, ay, az] (m/s², m/s², rad/s²)
+    odom_topic: "Odometry"                       # 里程计话题
+    odom_duration: 0.1                           # 里程计数据有效时长 (s)
+    deadband_velocity: [0.0, 0.0, 0.0]          # 死区速度 [vx, vy, wz] (m/s, m/s, rad/s)
+    velocity_timeout: 1.0                        # 速度超时时长 (s)

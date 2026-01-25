@@ -1,0 +1,12 @@
+pcd2pgm:
+  ros__parameters:
+    pcd_file: /home/nucshao/Climber_slam_2026/test.pcd
+    # odom_to_lidar_odom: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    odom_to_lidar_odom: [0.0, 0.0, 0.0, 0.0, -0.78, -1.6]
+    flag_pass_through: false
+    map_resolution: 0.07
+    map_topic_name: map
+    thre_radius: 0.1
+    thre_z_max: 3.0
+    thre_z_min: -100.0
+    thres_point_count: 1
