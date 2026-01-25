@@ -4,7 +4,7 @@ using Action = nav2_msgs::action::NavigateToPose;
 
 ReceiveNode::ReceiveNode() : Node("receive_node"), is_serial_open_(false)
 {
-    this->declare_parameter("port_name", "/dev/ttyUSB0");
+    this->declare_parameter("port_name", "/dev/ttySLAM");
     this->declare_parameter("baud_rate", 115200);
     this->declare_parameter("data_type", DATA_TYPE_THREE);
 
@@ -55,26 +55,22 @@ void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr ms
         return;
     const int CMD_LEN = 10;
     uint8_t send_buff[CMD_LEN] = {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xdd};
-    int16_t vx = static_cast<int16_t>(msg->linear.x * 10000);
-    int16_t vy = static_cast<int16_t>(msg->linear.y * 10000);
-    int16_t vz = static_cast<int16_t>(msg->angular.z * 10000);
-    vx = htons(vx);
-    vy = htons(vy);
-    vz = htons(vz);
-    send_buff[1] = (vx >> 8) & 0xFF;
-    send_buff[2] = vx & 0xFF;
-    send_buff[3] = (vy >> 8) & 0xFF;
-    send_buff[4] = vy & 0xFF;
-    send_buff[5] = (vz >> 8) & 0xFF;
-    send_buff[6] = vz & 0xFF;
-    send_buff[7] = 0; // mode/reserve
-    try
-    {
+    int16_t vx = static_cast<int16_t>(msg->linear.x * 1000);
+    int16_t vy = static_cast<int16_t>(msg->linear.y * 1000);
+    int16_t vz = static_cast<int16_t>(msg->angular.z * 1000);
+
+    send_buff[1] = (uint8_t)((vx >> 8) & 0xFF); 
+    send_buff[2] = (uint8_t)(vx & 0xFF);
+    send_buff[3] = (uint8_t)((vy >> 8) & 0xFF);
+    send_buff[4] = (uint8_t)(vy & 0xFF);
+    send_buff[5] = (uint8_t)((vz >> 8) & 0xFF);
+    send_buff[6] = (uint8_t)(vz & 0xFF);
+    try {
         serial_port_.write(send_buff, CMD_LEN);
-    }
-    catch (const serial::IOException &e)
-    {
-        RCLCPP_WARN(this->get_logger(), "Serial write failed: %s", e.what());
+        // 强制打印：证明“手”写出去了
+        RCLCPP_INFO(this->get_logger(), "Serial Write Done!"); 
+    } catch (const std::exception &e) {
+        RCLCPP_ERROR(this->get_logger(), "Write error: %s", e.what());
     }
 }
 
@@ -228,7 +224,7 @@ void ReceiveNode::parse_three()
         buffer_.erase(buffer_.begin(), it + 1);
 
         // --- 提取并转换全部 12 个数据字段 ---
-        int16_t score_diff_val = (int16_t)ntohs(data->score_diff); // 修复符号数bug
+        int16_t score_diff_val = (int16_t)ntohs(data->score_diff); 
         uint32_t match_time_val = ntohl(data->match_time);
         uint16_t our_hero_blood_val = ntohs(data->our_hero_blood);
         uint16_t our_infantry_blood_val = ntohs(data->our_infantry_blood);
@@ -359,7 +355,7 @@ void ReceiveNode::parse_seven()
     }
 }
 
-// --- main 函数 (保持不变) ---
+// --- main 函数 ---
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);

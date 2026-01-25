@@ -104,9 +104,6 @@ private:
     uint8_t calc_checksum(const std::vector<uint8_t> &packet);
     void send_navigation_goal(double x, double y);
 
-    // action goal 回调 (内部使用，可简化为 lambda)
-    // 尽管您在 cpp 文件中使用 lambda，但在 hpp 中列出关键方法有助于概览
-    // ... (action 回调的声明可以省略或保留)
 };
 
 #endif 

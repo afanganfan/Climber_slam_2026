@@ -8,6 +8,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_definitions(-std=c++17 -O3)
 
 find_package(ament_cmake_auto)
+find_package(pcl_ros REQUIRED)
+find_package(pcl_conversions REQUIRED)
 
 ament_auto_find_build_dependencies()
 ament_auto_add_executable(ground_segmentation_node src/ground_segmentation_node.cc)

@@ -7,7 +7,7 @@
         filter_size_map: 0.5
         cube_side_length: 1000.0
         runtime_pos_log_enable: false
-        map_file_path: "src/rm_nav_bringup/PCD/2025new1"
+        map_file_path: "src/rm_nav_bringup/PCD/test1"
 
         common:
             lid_topic:  "/livox/lidar"

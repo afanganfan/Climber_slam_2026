@@ -3,7 +3,7 @@
     use_sim_time: false 
     rough_leaf_size: 0.4
     refine_leaf_size: 0.1
-    pcd_path: "/home/old-nuc/climber_ws/src/rm_nav_bringup/PCD/2025new1.pcd"
+    pcd_path: "/home/nucshao/Climber_slam_2026/src/rm_nav_bringup/PCD/test1.pcd"
     map_frame_id: "map"
     odom_frame_id: "odom"
     laser_frame_id: "livox_frame"
