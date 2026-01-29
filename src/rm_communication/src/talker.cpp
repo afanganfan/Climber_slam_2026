@@ -55,9 +55,9 @@ void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr ms
         return;
     const int CMD_LEN = 10;
     uint8_t send_buff[CMD_LEN] = {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xdd};
-    int16_t vx = static_cast<int16_t>(msg->linear.x * 1000);
-    int16_t vy = static_cast<int16_t>(msg->linear.y * 1000);
-    int16_t vz = static_cast<int16_t>(msg->angular.z * 1000);
+    int16_t vx = static_cast<int16_t>(msg->linear.x * 2000);
+    int16_t vy = static_cast<int16_t>(msg->linear.y * 2000);
+    int16_t vz = static_cast<int16_t>(msg->angular.z * 2000);
 
     send_buff[1] = (uint8_t)((vx >> 8) & 0xFF); 
     send_buff[2] = (uint8_t)(vx & 0xFF);
