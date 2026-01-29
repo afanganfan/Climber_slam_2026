@@ -236,7 +236,7 @@ local_costmap:
       voxel2d_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True                            # 是否启用
-        publish_voxel_map: False                 # 是否发布体素地图
+        publish_voxel_map: false                 # 是否发布体素地图
         origin_z: 0.0                            # 原点Z坐标 (m)
         z_resolution: 0.05                       # Z方向分辨率 (m/cell)
         z_voxels: 16                             # Z方向体素数
@@ -249,7 +249,7 @@ local_costmap:
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
           min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
-          clearing: True                         # 是否清除自由空间
+          clearing: false                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
           data_type: "LaserScan"                 # 数据类型
       
@@ -322,7 +322,7 @@ global_costmap:
           min_obstacle_height: 0.2               # 最小障碍物高度 (m)
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
-          marking: False                          # 是否标记障碍物
+          marking: True                          # 是否标记障碍物
           data_type: "LaserScan"                 # 数据类型
       
       # ========================
@@ -346,7 +346,7 @@ global_costmap:
           min_obstacle_height: 0.2               # 最小障碍物高度 (m)
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
-          marking: False                          # 是否标记障碍物
+          marking: True                          # 是否标记障碍物
           data_type: "PointCloud2"               # 数据类型
       
       # ========================
