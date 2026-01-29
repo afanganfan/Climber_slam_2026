@@ -31,7 +31,16 @@
 *.out
 *.app
 
-/build
-/install
-/log
-/.vscode
+# VS Code 缓存
+.vscode/
+*.vc.db
+
+# 编译输出
+build/
+devel/
+install/
+log/
+
+# 大文件
+*.pcd
+*.bag
