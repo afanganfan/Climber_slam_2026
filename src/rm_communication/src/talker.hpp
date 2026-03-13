@@ -15,6 +15,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
+#include "rm_communication/zone_mode_switcher.hpp"
 
 using namespace std;
 using namespace std::chrono_literals;
@@ -89,6 +90,10 @@ private:
     // 决策辅助成员
     uint16_t old_seven_hp_{0};
     uint16_t old_three_our_sentry_{0};
+    
+    // 区域模式切换器和当前决策参数
+    std::shared_ptr<rm_communication::ZoneModeSwitcher> zone_switcher_;
+    rm_communication::ModeDecisionParams mode_params_;
 
     // --- 方法声明 ---
 
@@ -103,7 +108,7 @@ private:
     // 辅助函数
     uint8_t calc_checksum(const std::vector<uint8_t> &packet);
     void send_navigation_goal(double x, double y);
-
+    void execute_mode_navigation(rm_communication::ZoneMode mode);
 };
 
 #endif 

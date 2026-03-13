@@ -18,6 +18,7 @@ find_package(serial REQUIRED)         # 串口通信
 find_package(geometry_msgs REQUIRED)  # 涉及Twist等消息
 find_package(nav2_msgs REQUIRED)      # 导航 action 接口
 find_package(message_filters REQUIRED) # 用于lis/monitor
+find_package(tf2_ros REQUIRED)        # TF 变换
 
 
 include_directories(
@@ -33,6 +34,7 @@ ament_target_dependencies(talker
   serial
   nav2_msgs
   rclcpp_action
+  tf2_ros
 )
 
 # 3.2 订阅导航消息节点

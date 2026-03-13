@@ -25,6 +25,10 @@ ReceiveNode::ReceiveNode() : Node("receive_node"), is_serial_open_(false)
     timer_ = this->create_wall_timer(
         10ms, std::bind(&ReceiveNode::timer_callback, this));
 
+    // 初始化区域模式切换器
+    zone_switcher_ = std::make_shared<rm_communication::ZoneModeSwitcher>(this);
+    mode_params_ = rm_communication::ModeDecisionParams();
+
     RCLCPP_INFO(this->get_logger(), "Node initialized. Port: %s, Mode: %s",
                 port_name_.c_str(), data_type_.c_str());
 }
@@ -53,11 +57,12 @@ void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr ms
     // ... (保持原有的实现)
     if (!is_serial_open_)
         return;
-    const int CMD_LEN = 10;
-    uint8_t send_buff[CMD_LEN] = {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xdd};
-    int16_t vx = static_cast<int16_t>(msg->linear.x * 2000);
-    int16_t vy = static_cast<int16_t>(msg->linear.y * 2000);
-    int16_t vz = static_cast<int16_t>(msg->angular.z * 2000);
+    // 扩展为 11 字节：前 10 字节是速度指令，第 11 字节是模式
+    const int CMD_LEN = 11;
+    uint8_t send_buff[CMD_LEN] = {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xdd};
+    int16_t vx = static_cast<int16_t>(msg->linear.x * 7000);
+    int16_t vy = static_cast<int16_t>(msg->linear.y * 7000);
+    int16_t vz = static_cast<int16_t>(msg->angular.z * 7000);
 
     send_buff[1] = (uint8_t)((vx >> 8) & 0xFF); 
     send_buff[2] = (uint8_t)(vx & 0xFF);
@@ -65,10 +70,12 @@ void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr ms
     send_buff[4] = (uint8_t)(vy & 0xFF);
     send_buff[5] = (uint8_t)((vz >> 8) & 0xFF);
     send_buff[6] = (uint8_t)(vz & 0xFF);
+    send_buff[9] = zone_switcher_->current_mode_byte(); // 模式字节
+    
     try {
         serial_port_.write(send_buff, CMD_LEN);
-        // 强制打印：证明“手”写出去了
-        RCLCPP_INFO(this->get_logger(), "Serial Write Done!"); 
+        RCLCPP_DEBUG(this->get_logger(), "Serial Write: vx=%d vy=%d vz=%d mode=%d", 
+                    vx, vy, vz, send_buff[9]);
     } catch (const std::exception &e) {
         RCLCPP_ERROR(this->get_logger(), "Write error: %s", e.what());
     }
@@ -238,22 +245,18 @@ void ReceiveNode::parse_three()
         uint8_t enemy_hero_level_val = data->enemy_hero_level;
         uint8_t enemy_infantry_level_val = data->enemy_infantry_level;
 
-        // 导航决策（3V3）
-        // 条件1：我方哨兵血量<100 -> 回家
-        if (our_sentry_blood_val < 100)
-        {
-            send_navigation_goal(-0.8, 2.0); // 回家坐标
-        }
-        // 条件2：100 < 血量 < 200 且血量下降 -> 去回防点
-        else if (our_sentry_blood_val > 100 && our_sentry_blood_val < 200 && our_sentry_blood_val < old_three_our_sentry_)
-        {
-            send_navigation_goal(1.0, 2.0); // 回防点
-        }
-        // 条件3：比赛时间 < 60 且得分差在 -60..60 -> 去增益点
-        else if (match_time_val < 60 && (score_diff_val > -60 && score_diff_val < 60))
-        {
-            send_navigation_goal(-1.8, -1.0); // 增益点
-        }
+        // --- 更新模式决策（3V3） ---
+        double robot_x = 0.0, robot_y = 0.0;
+    if (zone_switcher_->get_robot_pose(robot_x, robot_y))
+    {
+        mode_params_.robot_x = robot_x;
+        mode_params_.robot_y = robot_y;
+        mode_params_.our_sentry_blood = our_sentry_blood_val; // 哨兵血量
+        mode_params_.match_time = match_time_val;
+        
+        // 让决策器更新状态，并根据返回的模式执行导航
+        execute_mode_navigation(zone_switcher_->update(mode_params_));
+    }
 
         // 业务逻辑处理 (发布全部消息)
         auto msg = std::make_unique<std_msgs::msg::String>();
@@ -324,16 +327,16 @@ void ReceiveNode::parse_seven()
         uint8_t enemy_alive_num_val = data->enemy_alive_num;
         uint8_t shooter_on_val = data->shooter_on;
 
-        // 导航决策（7V7）
-        // 条件1：hp少于100 -> 回家
-        if (hp_val < 100)
+        // --- 更新模式决策（7V7） ---
+        double robot_x = 0.0, robot_y = 0.0;
+        if (zone_switcher_->get_robot_pose(robot_x, robot_y))
         {
-            send_navigation_goal(-0.8, 2.0);
-        }
-        // 条件2：100 < hp < 200 且 hp 下降 -> 去回防点
-        else if (hp_val > 100 && hp_val < 200 && hp_val < old_seven_hp_)
-        {
-            send_navigation_goal(1.0, 2.0);
+            mode_params_.robot_x = robot_x;
+            mode_params_.robot_y = robot_y;
+            mode_params_.our_sentry_blood = hp_val; // 自身血量
+            mode_params_.match_time = time_val;
+        
+            execute_mode_navigation(zone_switcher_->update(mode_params_));
         }
 
         // 业务逻辑处理 (发布全部消息)
@@ -354,13 +357,39 @@ void ReceiveNode::parse_seven()
         old_seven_hp_ = hp_val;
     }
 }
+void ReceiveNode::execute_mode_navigation(rm_communication::ZoneMode mode)
+{
+    static rm_communication::ZoneMode last_executed_mode = rm_communication::ZoneMode::MOVE;
 
+    // 只有当模式发生改变时，才发送新的导航目标，避免频繁发送 Action 导致卡死
+    if (mode == last_executed_mode) return;
+
+    switch (mode)
+    {
+        case rm_communication::ZoneMode::DEFENSE:
+            RCLCPP_INFO(this->get_logger(), "策略执行：开启防御模式，正在回家...");
+            send_navigation_goal(-0.8, 2.0); // 你的回家坐标
+            break;
+
+        case rm_communication::ZoneMode::ATTACK:
+            RCLCPP_INFO(this->get_logger(), "策略执行：开启进攻模式，前往前线...");
+            send_navigation_goal(5.5, 0.0);  // 你的进攻点坐标
+            break;
+
+        case rm_communication::ZoneMode::MOVE:
+            RCLCPP_INFO(this->get_logger(), "策略执行：开启移动模式，巡逻中...");
+            // 可以设置一个默认的巡逻点或者取消当前目标
+            break;
+    }
+
+    last_executed_mode = mode;
+}
 // --- main 函数 ---
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
     // 引用 ReceiveNode 类，而不是内联定义
     rclcpp::spin(std::make_shared<ReceiveNode>());
-    rclcpp::shutdown();
+    rclcpp::shutdown();          
     return 0;
 }

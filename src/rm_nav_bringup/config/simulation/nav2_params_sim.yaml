@@ -133,7 +133,7 @@ controller_server:
       #*******************************************************************************
       # ViaPoints 中间点
       #*******************************************************************************
-      global_plan_viapoint_sep: 0.5         #从全局计划中提取的连续中间点之间的最小分离距离
+      global_plan_viapoint_sep: 0.8         #从全局计划中提取的连续中间点之间的最小分离距离 -> 增大以减少在中间点的频繁停顿
       via_points_ordered: False             #是否遵循存储容器中中间点的顺序
 
       #*******************************************************************************
@@ -363,7 +363,7 @@ map_saver:
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 5.0
+    expected_planner_frequency: 1.0
     use_sim_time: False
     planner_plugins: ["GridBased"]
     GridBased:
