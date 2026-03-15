@@ -28,6 +28,8 @@ ReceiveNode::ReceiveNode() : Node("receive_node"), is_serial_open_(false)
     // 初始化区域模式切换器
     zone_switcher_ = std::make_shared<rm_communication::ZoneModeSwitcher>(this);
     mode_params_ = rm_communication::ModeDecisionParams();
+    last_idle_cmd_send_time_ = this->now();
+    last_nav_goal_send_time_ = this->now();
 
     RCLCPP_INFO(this->get_logger(), "Node initialized. Port: %s, Mode: %s",
                 port_name_.c_str(), data_type_.c_str());
@@ -51,34 +53,47 @@ uint8_t ReceiveNode::calc_checksum(const std::vector<uint8_t> &packet)
     return sum;
 }
 
-// --- cmd_vel_callback 实现 (发送速度到下位机) ---
-void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
+void ReceiveNode::send_cmd_packet(int16_t vx, int16_t vy, int16_t vz)
 {
-    // ... (保持原有的实现)
-    if (!is_serial_open_)
-        return;
-    // 扩展为 11 字节：前 10 字节是速度指令，第 11 字节是模式
-    const int CMD_LEN = 11;
-    uint8_t send_buff[CMD_LEN] = {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xdd};
-    int16_t vx = static_cast<int16_t>(msg->linear.x * 7000);
-    int16_t vy = static_cast<int16_t>(msg->linear.y * 7000);
-    int16_t vz = static_cast<int16_t>(msg->angular.z * 7000);
+    // 11 字节：帧头 + 3轴速度(6B) + 模式 + 预留2B + 帧尾
+    const int CMD_LEN = 10;
+    uint8_t send_buff[CMD_LEN] = {0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xdd};
 
-    send_buff[1] = (uint8_t)((vx >> 8) & 0xFF); 
+    send_buff[1] = (uint8_t)((vx >> 8) & 0xFF);
     send_buff[2] = (uint8_t)(vx & 0xFF);
     send_buff[3] = (uint8_t)((vy >> 8) & 0xFF);
     send_buff[4] = (uint8_t)(vy & 0xFF);
     send_buff[5] = (uint8_t)((vz >> 8) & 0xFF);
     send_buff[6] = (uint8_t)(vz & 0xFF);
-    send_buff[9] = zone_switcher_->current_mode_byte(); // 模式字节
-    
-    try {
+    const uint8_t mode_byte = zone_switcher_->current_mode_byte();
+    send_buff[7] = mode_byte; // 模式字节
+
+    try
+    {
+        RCLCPP_INFO(this->get_logger(), "Send mode: %u", static_cast<unsigned int>(mode_byte));
         serial_port_.write(send_buff, CMD_LEN);
-        RCLCPP_DEBUG(this->get_logger(), "Serial Write: vx=%d vy=%d vz=%d mode=%d", 
-                    vx, vy, vz, send_buff[9]);
-    } catch (const std::exception &e) {
-        RCLCPP_ERROR(this->get_logger(), "Write error: %s", e.what());
     }
+    catch (const std::exception &e)
+    {
+        (void)e;
+    }
+}
+
+// --- cmd_vel_callback 实现 (发送速度到下位机) ---
+void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
+{
+    cached_vx_ = static_cast<int16_t>(msg->linear.x * 6000);
+    cached_vy_ = static_cast<int16_t>(msg->linear.y * 6000);
+    cached_vz_ = static_cast<int16_t>(msg->angular.z * 6000);
+
+    if (!is_serial_open_)
+        return;
+
+    // 只有有导航目标时，才按 cmd_vel 到达频率发送
+    if (!has_nav_goal_active_)
+        return;
+
+    send_cmd_packet(cached_vx_, cached_vy_, cached_vz_);
 }
 
 // --- send_navigation_goal 实现 (发送导航目标) ---
@@ -98,6 +113,12 @@ void ReceiveNode::send_navigation_goal(double x, double y)
     pose.pose.orientation.w = 1.0;
     goal_msg.pose = pose;
 
+    nav_goal_inflight_ = true;
+    has_last_nav_goal_ = true;
+    last_nav_goal_x_ = x;
+    last_nav_goal_y_ = y;
+    last_nav_goal_send_time_ = this->now();
+
     auto send_goal_options = rclcpp_action::Client<Action>::SendGoalOptions();
     send_goal_options.goal_response_callback =
         [this](rclcpp_action::ClientGoalHandle<Action>::SharedPtr goal_handle)
@@ -105,6 +126,7 @@ void ReceiveNode::send_navigation_goal(double x, double y)
         if (!goal_handle)
         {
             RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
+            nav_goal_inflight_ = false;
         }
         else
         {
@@ -125,20 +147,62 @@ void ReceiveNode::send_navigation_goal(double x, double y)
         {
         case rclcpp_action::ResultCode::SUCCEEDED:
             RCLCPP_INFO(this->get_logger(), "Navigation succeeded");
+            has_nav_goal_active_ = false;
+            nav_goal_inflight_ = false;
             break;
         case rclcpp_action::ResultCode::ABORTED:
             RCLCPP_ERROR(this->get_logger(), "Navigation aborted");
+            has_nav_goal_active_ = false;
+            nav_goal_inflight_ = false;
             break;
         case rclcpp_action::ResultCode::CANCELED:
             RCLCPP_INFO(this->get_logger(), "Navigation canceled");
+            has_nav_goal_active_ = false;
+            nav_goal_inflight_ = false;
             break;
         default:
             RCLCPP_ERROR(this->get_logger(), "Navigation unknown result");
+            has_nav_goal_active_ = false;
+            nav_goal_inflight_ = false;
             break;
         }
     };
 
     action_client_->async_send_goal(goal_msg, send_goal_options);
+}
+
+void ReceiveNode::execute_mode_navigation(const rm_communication::DecisionResult &decision)
+{
+    has_nav_goal_active_ = decision.has_nav_goal;
+
+    // 导航与模式是同级决策：有目标就发，不再依赖“模式是否切换”
+    if (!decision.has_nav_goal)
+    {
+        nav_goal_inflight_ = false;
+        return;
+    }
+
+    const bool same_goal = has_last_nav_goal_ &&
+                           (std::fabs(decision.goal_x - last_nav_goal_x_) < 0.05) &&
+                           (std::fabs(decision.goal_y - last_nav_goal_y_) < 0.05);
+
+    // 同一目标且仍在执行中：不重复发送
+    if (same_goal && nav_goal_inflight_)
+    {
+        return;
+    }
+
+    // 同一目标刚发送过：做最小重发间隔，避免高频触发 Nav2 中止
+    const auto now = this->now();
+    if (same_goal && (now - last_nav_goal_send_time_).seconds() < 1.0)
+    {
+        return;
+    }
+
+    RCLCPP_INFO(this->get_logger(),
+                "策略执行：mode=%d, 发送导航目标(%.2f, %.2f)",
+                static_cast<int>(decision.mode), decision.goal_x, decision.goal_y);
+    send_navigation_goal(decision.goal_x, decision.goal_y);
 }
 
 void ReceiveNode::timer_callback()
@@ -154,6 +218,7 @@ void ReceiveNode::timer_callback()
         }
         catch (const serial::IOException &e)
         {
+            RCLCPP_WARN(this->get_logger(), "串口打开失败(%s): %s", port_name_.c_str(), e.what());
             return;
         }
         catch (const std::exception &e)
@@ -180,6 +245,14 @@ void ReceiveNode::timer_callback()
         else
         {
             parse_three();
+        }
+
+        // 没有导航目标时，按 10Hz 周期发送最新速度缓存
+        const auto now = this->now();
+        if (!has_nav_goal_active_ && (now - last_idle_cmd_send_time_).nanoseconds() >= 100000000)
+        {
+            send_cmd_packet(cached_vx_, cached_vy_, cached_vz_);
+            last_idle_cmd_send_time_ = now;
         }
     }
     catch (const serial::IOException &e)
@@ -217,10 +290,37 @@ void ReceiveNode::parse_three()
             continue;
         }
 
-        std::vector<uint8_t> packet(buffer_.begin() + head_idx, it + 1);
-        auto *data = reinterpret_cast<DownlinkDataThree *>(packet.data());
+        std::vector<uint8_t> packet;
+        DownlinkDataThree *data = nullptr;
+        bool checksum_ok = false;
+        auto erase_end_it = it + 1;
 
-        if (calc_checksum(packet) != data->checksum)
+        // 格式A（原定义）：[payload][checksum][tail]
+        if (head_idx >= 0)
+        {
+            packet.assign(buffer_.begin() + head_idx, buffer_.begin() + head_idx + LEN_THREE);
+            data = reinterpret_cast<DownlinkDataThree *>(packet.data());
+            checksum_ok = (calc_checksum(packet) == data->checksum);
+        }
+
+        // 格式B（兼容下位机常见实现）：[payload][tail][checksum]
+        if (!checksum_ok)
+        {
+            long head_idx_b = tail_idx - (LEN_THREE - 2);
+            if (head_idx_b >= 0 && (tail_idx + 1) < static_cast<long>(buffer_.size()))
+            {
+                packet.assign(buffer_.begin() + head_idx_b, buffer_.begin() + head_idx_b + LEN_THREE);
+                data = reinterpret_cast<DownlinkDataThree *>(packet.data());
+                uint8_t checksum_b = packet[LEN_THREE - 1];
+                checksum_ok = (packet[LEN_THREE - 2] == FRAME_TAIL) && (calc_checksum(packet) == checksum_b);
+                if (checksum_ok)
+                {
+                    erase_end_it = it + 2; // 额外吞掉 tail 后面的 checksum
+                }
+            }
+        }
+
+        if (!checksum_ok)
         {
             buffer_.erase(buffer_.begin(), it + 1);
             RCLCPP_WARN(this->get_logger(), "3V3 Checksum mismatch! Drop packet.");
@@ -228,7 +328,7 @@ void ReceiveNode::parse_three()
         }
 
         // 校验成功：移除缓冲区中的这帧数据
-        buffer_.erase(buffer_.begin(), it + 1);
+        buffer_.erase(buffer_.begin(), erase_end_it);
 
         // --- 提取并转换全部 12 个数据字段 ---
         int16_t score_diff_val = (int16_t)ntohs(data->score_diff); 
@@ -252,10 +352,12 @@ void ReceiveNode::parse_three()
         mode_params_.robot_x = robot_x;
         mode_params_.robot_y = robot_y;
         mode_params_.our_sentry_blood = our_sentry_blood_val; // 哨兵血量
+        mode_params_.enemy_sentry_blood = enemy_sentry_blood_val; // 敌方哨兵血量
         mode_params_.match_time = match_time_val;
         
-        // 让决策器更新状态，并根据返回的模式执行导航
-        execute_mode_navigation(zone_switcher_->update(mode_params_));
+        // 同级决策：一次 update 同时得到“模式 + 导航目标”
+        auto decision = zone_switcher_->update(mode_params_);
+        execute_mode_navigation(decision);
     }
 
         // 业务逻辑处理 (发布全部消息)
@@ -303,10 +405,37 @@ void ReceiveNode::parse_seven()
             continue;
         }
 
-        std::vector<uint8_t> packet(buffer_.begin() + head_idx, it + 1);
-        auto *data = reinterpret_cast<DownlinkDataSeven *>(packet.data());
+        std::vector<uint8_t> packet;
+        DownlinkDataSeven *data = nullptr;
+        bool checksum_ok = false;
+        auto erase_end_it = it + 1;
 
-        if (calc_checksum(packet) != data->checksum)
+        // 格式A（原定义）：[payload][checksum][tail]
+        if (head_idx >= 0)
+        {
+            packet.assign(buffer_.begin() + head_idx, buffer_.begin() + head_idx + LEN_SEVEN);
+            data = reinterpret_cast<DownlinkDataSeven *>(packet.data());
+            checksum_ok = (calc_checksum(packet) == data->checksum);
+        }
+
+        // 格式B（兼容）：[payload][tail][checksum]
+        if (!checksum_ok)
+        {
+            long head_idx_b = tail_idx - (LEN_SEVEN - 2);
+            if (head_idx_b >= 0 && (tail_idx + 1) < static_cast<long>(buffer_.size()))
+            {
+                packet.assign(buffer_.begin() + head_idx_b, buffer_.begin() + head_idx_b + LEN_SEVEN);
+                data = reinterpret_cast<DownlinkDataSeven *>(packet.data());
+                uint8_t checksum_b = packet[LEN_SEVEN - 1];
+                checksum_ok = (packet[LEN_SEVEN - 2] == FRAME_TAIL) && (calc_checksum(packet) == checksum_b);
+                if (checksum_ok)
+                {
+                    erase_end_it = it + 2;
+                }
+            }
+        }
+
+        if (!checksum_ok)
         {
             buffer_.erase(buffer_.begin(), it + 1);
             RCLCPP_WARN(this->get_logger(), "7V7 Checksum mismatch! Drop packet.");
@@ -314,7 +443,7 @@ void ReceiveNode::parse_seven()
         }
 
         // 校验成功
-        buffer_.erase(buffer_.begin(), it + 1);
+        buffer_.erase(buffer_.begin(), erase_end_it);
 
         // --- 提取并转换全部 8 个数据字段 ---
         int16_t base_hp_diff_val = (int16_t)ntohs(data->base_hp_diff); // 修复符号数bug
@@ -336,7 +465,8 @@ void ReceiveNode::parse_seven()
             mode_params_.our_sentry_blood = hp_val; // 自身血量
             mode_params_.match_time = time_val;
         
-            execute_mode_navigation(zone_switcher_->update(mode_params_));
+            auto decision = zone_switcher_->update(mode_params_);
+            execute_mode_navigation(decision);
         }
 
         // 业务逻辑处理 (发布全部消息)
@@ -357,33 +487,7 @@ void ReceiveNode::parse_seven()
         old_seven_hp_ = hp_val;
     }
 }
-void ReceiveNode::execute_mode_navigation(rm_communication::ZoneMode mode)
-{
-    static rm_communication::ZoneMode last_executed_mode = rm_communication::ZoneMode::MOVE;
 
-    // 只有当模式发生改变时，才发送新的导航目标，避免频繁发送 Action 导致卡死
-    if (mode == last_executed_mode) return;
-
-    switch (mode)
-    {
-        case rm_communication::ZoneMode::DEFENSE:
-            RCLCPP_INFO(this->get_logger(), "策略执行：开启防御模式，正在回家...");
-            send_navigation_goal(-0.8, 2.0); // 你的回家坐标
-            break;
-
-        case rm_communication::ZoneMode::ATTACK:
-            RCLCPP_INFO(this->get_logger(), "策略执行：开启进攻模式，前往前线...");
-            send_navigation_goal(5.5, 0.0);  // 你的进攻点坐标
-            break;
-
-        case rm_communication::ZoneMode::MOVE:
-            RCLCPP_INFO(this->get_logger(), "策略执行：开启移动模式，巡逻中...");
-            // 可以设置一个默认的巡逻点或者取消当前目标
-            break;
-    }
-
-    last_executed_mode = mode;
-}
 // --- main 函数 ---
 int main(int argc, char *argv[])
 {

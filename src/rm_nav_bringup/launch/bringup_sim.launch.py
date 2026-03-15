@@ -82,7 +82,7 @@ def generate_launch_description():
 
     declare_world_cmd = DeclareLaunchArgument(
         'world',
-        default_value='RMUL',
+        default_value='RMUL2',
         description='Select world (map file, pcd file, world file share the same name prefix as the this parameter)')
 
     declare_mode_cmd = DeclareLaunchArgument(

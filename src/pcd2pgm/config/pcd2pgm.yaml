@@ -9,4 +9,4 @@ pcd2pgm:
     thre_radius: 0.1
     thre_z_max: 3.0
     thre_z_min: -100.0
-    thres_point_count: 1
+    thres_point_count: 10

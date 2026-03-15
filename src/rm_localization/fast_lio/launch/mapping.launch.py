@@ -51,12 +51,11 @@ def generate_launch_description():
         arguments=['-d', rviz_cfg],
         condition=IfCondition(rviz_use)
     )
-    # lidar_tf = Node(
-    #     name='lidar_tf',
-    #     package='tf2_ros',
-    #     executable='static_transform_publisher',
-    #     arguments=['0','0','-0.55','0','0','0','1','body','base_link']
-    #     )
+    robot_state_pub_node = Node(
+    package='robot_state_publisher',
+    executable='robot_state_publisher',
+    parameters=[{'robot_description': open('/home/nucshao/Climber_slam_2026/src/rm_robot_description/urdf/sentry.urdf.xacro').read()}]
+    )
 
     ld = LaunchDescription()
     ld.add_action(declare_use_sim_time_cmd)

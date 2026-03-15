@@ -42,6 +42,12 @@ amcl:
     z_rand: 0.1                                  # 随机部分的混合权重
     z_short: 0.05                                # 短距离部分的混合权重
     scan_topic: scan                             # 激光扫描话题名称
+    # set_initial_pose: true                       # 启动时自动设置初始位姿
+    # initial_pose:
+    #   x: 10.5                                    # 初始X坐标 (map)
+    #   y: -0.5                                    # 初始Y坐标 (map)
+    #   z: 0.0                                     # 初始Z坐标 (map)
+    #   yaw: 0.0                                   # 初始偏航角 (rad)
 
 # ========================
 # AMCL 地图客户端配置
@@ -177,12 +183,11 @@ controller_server:
       trans_stopped_velocity: 0.02               # 停止平移的速度阈值 (m/s)
       short_circuit_trajectory_evaluation: True  # 是否短路轨迹评估
       stateful: True                             # 是否保存状态
-      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]  # 评价函数列表
-      BaseObstacle.scale: 0.005                   # 基础障碍物评价函数权重
+      critics: ["RotateToGoal", "Oscillation", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]  # 评价函数列表（忽略本地障碍物代价）
       PathAlign.scale: 32.0                      # 路径对齐评价函数权重
-      PathAlign.forward_point_distance: 0.1      # 前瞻距离 (m) -> 增大以平滑轨迹跟踪
+      PathAlign.forward_point_distance: 0.5      # 前瞻距离 (m) -> 增大以平滑轨迹跟踪
       GoalAlign.scale: 24.0                      # 目标对齐评价函数权重
-      GoalAlign.forward_point_distance: 0.1      # 前瞻距离 (m) -> 增大以平滑轨迹跟踪
+      GoalAlign.forward_point_distance: 0.5      # 前瞻距离 (m) -> 增大以平滑轨迹跟踪
       PathDist.scale: 32.0                       # 路径距离评价函数权重
       GoalDist.scale: 24.0                       # 目标距离评价函数权重
       RotateToGoal.scale: 32.0                   # 旋转至目标评价函数权重
@@ -219,7 +224,7 @@ local_costmap:
       height: 5                                  # 代价地图高度 (m)
       resolution: 0.05                           # 代价地图分辨率 (m/cell)
       robot_radius: 0.2                          # 机器人半径 (m)
-      plugins: ["voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
+      plugins: ["inflation_layer"]  # 图层插件列表（仅保留膨胀层，忽略本地实时障碍物）
       
       # ========================
       # 膨胀层 - 在障碍物周围创建缓冲区
@@ -227,8 +232,8 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True                            # 是否启用膨胀层
-        cost_scaling_factor: 8.0                 # 成本缩放因子
-        inflation_radius: 0.6                    # 膨胀半径 (m)
+        cost_scaling_factor: 4.0                 # 成本缩放因子
+        inflation_radius: 0.4                    # 膨胀半径 (m)
       
       # ========================
       # 2D体素层 - 处理激光雷达扫描数据
@@ -247,9 +252,9 @@ local_costmap:
           topic: /scan                           # 激光扫描话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.11                # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+          min_obstacle_height: 0.01                # 最小障碍物高度 (m) 
           max_obstacle_height: 1.0               # 最大障碍物高度 (m)
-          clearing: false                         # 是否清除自由空间
+          clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
           data_type: "LaserScan"                 # 数据类型
       
@@ -263,15 +268,15 @@ local_costmap:
         origin_z: 0.0                            # 原点Z坐标 (m)
         z_resolution: 0.05                       # Z方向分辨率 (m/cell)
         z_voxels: 16                             # Z方向体素数
-        mark_threshold: 1                        # 标记阈值 (体素数)
+        mark_threshold: 3                        # 标记阈值 (体素数)
         observation_sources: livox               # 观测数据源
-        min_obstacle_height: 0.11                # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+        min_obstacle_height: 0.01                # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
         max_obstacle_height: 1.0                # 最大障碍物高度 (m)
         livox:
           topic: /livox/lidar/pointcloud         # Livox点云话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.11                # 最小障碍物高度 (m) — 忽略地面点
+          min_obstacle_height: 0.01                # 最小障碍物高度 (m) — 忽略地面点
           max_obstacle_height: 1.0               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
@@ -303,7 +308,7 @@ global_costmap:
       global_frame: map                          # 全局参考坐标系
       robot_base_frame: base_link                # 机器人基座坐标系
       use_sim_time: False                        # 是否使用仿真时间
-      robot_radius: 0.2                          # 机器人半径 (m)
+      robot_radius: 0.22                         # 机器人半径 (m) -> 略增安全包络，提高全局绕障余量
       resolution: 0.05                           # 代价地图分辨率 (m/cell)
       track_unknown_space: true                  # 是否追踪未知空间
       plugins: ["static_layer", "voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
@@ -319,7 +324,7 @@ global_costmap:
           topic: /scan                           # 激光扫描话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.11                # 最小障碍物高度 (m)
+          min_obstacle_height: 0.0               # 最小障碍物高度 (m) -> 降低阈值以识别更低矮障碍
           max_obstacle_height: 1.0               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
@@ -335,15 +340,15 @@ global_costmap:
         origin_z: 0.0                            # 原点Z坐标 (m)
         z_resolution: 0.05                       # Z方向分辨率 (m/cell)
         z_voxels: 16                             # Z方向体素数
-        mark_threshold: 1                        # 标记阈值 (体素数)
+        mark_threshold: 3                       # 标记阈值 (体素数)
         observation_sources: livox               # 观测数据源
-        min_obstacle_height: 0.11                # 最小障碍物高度 (m)
+        min_obstacle_height: 0.0                # 最小障碍物高度 (m) -> 降低阈值以识别更低矮障碍
         max_obstacle_height: 1.0                 # 最大障碍物高度 (m)
         livox:
           topic: /livox/lidar/pointcloud         # Livox点云话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.11                # 最小障碍物高度 (m)
+          min_obstacle_height: 0.0                # 最小障碍物高度 (m) -> 降低阈值以识别更低矮障碍
           max_obstacle_height: 1.0                 # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
@@ -362,8 +367,9 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True                            # 是否启用膨胀层
-        cost_scaling_factor: 8.0                 # 成本缩放因子
-        inflation_radius: 0.4                    # 膨胀半径 (m)
+        cost_scaling_factor: 4.0                 # 成本缩放因子 -> 降低衰减陡峭度，规划器更早远离障碍物
+        inflation_radius: 0.45                   # 膨胀半径 (m) -> 缩小全局绕障缓冲
+        inflate_unknown: True                    # 对未知区域也进行膨胀，提升保守避障能力
       
       always_send_full_costmap: True             # 总是发送完整代价地图
   

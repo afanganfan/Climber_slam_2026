@@ -6,6 +6,7 @@
 #include <vector>
 #include <deque>
 #include <algorithm>
+#include <cmath>
 #include <arpa/inet.h>
 
 #include "rclcpp/rclcpp.hpp"
@@ -90,6 +91,20 @@ private:
     // 决策辅助成员
     uint16_t old_seven_hp_{0};
     uint16_t old_three_our_sentry_{0};
+    bool has_nav_goal_active_{false};
+
+    // 发送到底盘的最新速度缓存（无导航目标时按10Hz发送）
+    int16_t cached_vx_{0};
+    int16_t cached_vy_{0};
+    int16_t cached_vz_{0};
+    rclcpp::Time last_idle_cmd_send_time_;
+
+    // 导航目标去重与节流状态
+    bool nav_goal_inflight_{false};
+    bool has_last_nav_goal_{false};
+    double last_nav_goal_x_{0.0};
+    double last_nav_goal_y_{0.0};
+    rclcpp::Time last_nav_goal_send_time_;
     
     // 区域模式切换器和当前决策参数
     std::shared_ptr<rm_communication::ZoneModeSwitcher> zone_switcher_;
@@ -107,8 +122,9 @@ private:
 
     // 辅助函数
     uint8_t calc_checksum(const std::vector<uint8_t> &packet);
+    void send_cmd_packet(int16_t vx, int16_t vy, int16_t vz);
     void send_navigation_goal(double x, double y);
-    void execute_mode_navigation(rm_communication::ZoneMode mode);
+    void execute_mode_navigation(const rm_communication::DecisionResult &decision);
 };
 
 #endif 

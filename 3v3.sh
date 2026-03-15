@@ -13,7 +13,7 @@ cmds=(
 	"ros2 launch icp_registration icp.launch.py"
 	"ros2 launch rm_navigation bringup_launch.py"
 	"source install/setup.bash
-	ros2 run rm_communication talker"
+	ros2 run rm_communication talker --ros-args -p port_name:=/dev/ttyUSB0 -p data_type:=three"
 	"ros2 topic echo cmd_vel_nav"
 	# "sleep 4 && python3 src/rm_navigation/scripts/send_waypoints.py"
 )
@@ -30,26 +30,26 @@ for ((i=1; i<${#cmds[@]}; i++)); do
         -- bash -c "source install/setup.bash; ${cmds[i]}; exec bash"
 done
 
-#!/bin/bash
+# !/bin/bash
 
-#cmds=(
-#	"colcon build --symlink-install"
-#	"sudo chmod 666 /dev/tty*"
-#	"ros2 launch rm_bringup bringup.launch.py"
-#	"ros2 launch livox_ros_driver2 msg_MID360_launch.py"
-#	#"ros2 launch rplidar_ros rplidar_a2m7_launch.py"
-#	"ros2 launch linefit_ground_segmentation_ros segmentation.launch.py" 
-#	"ros2 launch fast_lio mapping.launch.py"
-#	"ros2 launch imu_complementary_filter complementary_filter.launch.py"
-#	"ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py"
-#	"ros2 launch icp_registration icp.launch.py"
-#	"ros2 launch rm_navigation bringup_launch.py"
-#	"ros2 run rm_communication talker"
-#	)
+# cmds=(
+# 	"colcon build --symlink-install"
+# 	"sudo chmod 666 /dev/tty*"
+# 	"ros2 launch rm_bringup bringup.launch.py"
+# 	"ros2 launch livox_ros_driver2 msg_MID360_launch.py"
+# 	#"ros2 launch rplidar_ros rplidar_a2m7_launch.py"
+# 	"ros2 launch linefit_ground_segmentation_ros segmentation.launch.py" 
+# 	"ros2 launch fast_lio mapping.launch.py"
+# 	"ros2 launch imu_complementary_filter complementary_filter.launch.py"
+# 	"ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py"
+# 	"ros2 launch icp_registration icp.launch.py"
+# 	"ros2 launch rm_navigation bringup_launch.py"
+# 	"ros2 run rm_communication talker"
+# 	)
 
-#for cmd in "${cmds[@]}";
-#do
-#	echo Current CMD : "$cmd"
-#	gnome-terminal -- bash -c "cd /home/old-nuc/climber_ws/;source install/setup.bash;$cmd;exec bash;"
-#	sleep 0.2
-#done
+# for cmd in "${cmds[@]}";
+# do
+# 	echo Current CMD : "$cmd"
+# 	gnome-terminal -- bash -c "cd /home/old-nuc/climber_ws/;source install/setup.bash;$cmd;exec bash;"
+# 	sleep 0.2
+# done
