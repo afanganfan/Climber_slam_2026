@@ -81,6 +81,11 @@ IcpNode::IcpNode(const rclcpp::NodeOptions &options)
     tf2::Quaternion q;
     q.setRPY(initial_pose_vec.at(3), initial_pose_vec.at(4),
              initial_pose_vec.at(5));
+    q.normalize();
+    initial_pose_.orientation.x = q.x();
+    initial_pose_.orientation.y = q.y();
+    initial_pose_.orientation.z = q.z();
+    initial_pose_.orientation.w = q.w();
   } catch (const std::out_of_range &ex) {
     RCLCPP_ERROR(this->get_logger(),
                  "initial_pose is not a vector with 6 elements, what():%s",

@@ -19,7 +19,7 @@ amcl:
     lambda_short: 0.1                            # 短距离激光分布参数
     laser_likelihood_max_dist: 2.0               # 激光似然字段最大距离 (m)
     laser_max_range: 20.0                       # 激光最大测量范围 (m)
-    laser_min_range: 0.2                        # 激光最小测量范围 (m)
+    laser_min_range: -1.0                        # 激光最小测量范围 (m)
     laser_model_type: "likelihood_field"         # 激光模型类型 (likelihood_field 或 beam)
     max_beams: 100                                # 每次扫描使用的最大激光束数
     max_particles: 2000                          # 最大粒子数
@@ -35,19 +35,13 @@ amcl:
     sigma_hit: 0.2                               # 激光测量命中的标准差 (m)
     tf_broadcast: true                           # 是否广播tf变换
     transform_tolerance: 1.0                     # 变换容差 (s)
-    update_min_a: 0.1                            # 更新时最小旋转 (rad)
-    update_min_d: 0.05                           # 更新时最小平移 (m)
-    z_hit: 0.8                                   # 命中部分的混合权重
+    update_min_a: 0.2                            # 更新时最小旋转 (rad)
+    update_min_d: 0.25                           # 更新时最小平移 (m)
+    z_hit: 0.5                                   # 命中部分的混合权重
     z_max: 0.05                                  # 最大范围部分的混合权重
-    z_rand: 0.1                                  # 随机部分的混合权重
+    z_rand: 0.5                                  # 随机部分的混合权重
     z_short: 0.05                                # 短距离部分的混合权重
     scan_topic: scan                             # 激光扫描话题名称
-    # set_initial_pose: true                       # 启动时自动设置初始位姿
-    # initial_pose:
-    #   x: 10.5                                    # 初始X坐标 (map)
-    #   y: -0.5                                    # 初始Y坐标 (map)
-    #   z: 0.0                                     # 初始Z坐标 (map)
-    #   yaw: 0.0                                   # 初始偏航角 (rad)
 
 # ========================
 # AMCL 地图客户端配置
@@ -123,7 +117,7 @@ bt_navigator_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: False                          # 是否使用仿真时间
-    controller_frequency: 60.0                    # 控制器运行频率 (Hz)
+    controller_frequency: 20.0                    # 控制器运行频率 (Hz)
     min_x_velocity_threshold: 0.001              # X方向最小速度阈值 (m/s)
     min_y_velocity_threshold: 0.001                # Y方向最小速度阈值 (m/s)
     min_theta_velocity_threshold: 0.001          # 角速度最小阈值 (rad/s)
@@ -149,7 +143,7 @@ controller_server:
       stateful: True                             # 是否保存状态
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.25                    # XY平面目标容差 (m)
-      yaw_goal_tolerance: 0.5                   # 偏航角目标容差 (rad)
+      yaw_goal_tolerance: 0.8                   # 偏航角目标容差 (rad)
     
     # ========================
     # DWB (动态窗口法) 局部路径规划器参数
@@ -175,19 +169,20 @@ controller_server:
       vx_samples: 40                             # X方向速度采样点数
       vy_samples: 40                             # Y方向速度采样点数
       vtheta_samples: 20                         # 角速度采样点数
-      sim_time: 2.5                             # 轨迹模拟时长 (s)
+      sim_time: 1.7                             # 轨迹模拟时长 (s)
       linear_granularity: 0.05                   # 线性采样粒度 (m)
       angular_granularity: 0.025                 # 角度采样粒度 (rad)
       transform_tolerance: 0.2                   # 变换容差 (s)
       xy_goal_tolerance: 0.25                    # XY目标容差 (m)
-      trans_stopped_velocity: 0.02               # 停止平移的速度阈值 (m/s)
+      trans_stopped_velocity: 0.25               # 停止平移的速度阈值 (m/s)
       short_circuit_trajectory_evaluation: True  # 是否短路轨迹评估
       stateful: True                             # 是否保存状态
-      critics: ["RotateToGoal", "Oscillation", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]  # 评价函数列表（忽略本地障碍物代价）
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]  # 评价函数列表
+      BaseObstacle.scale: 0.05                   # 基础障碍物评价函数权重
       PathAlign.scale: 32.0                      # 路径对齐评价函数权重
-      PathAlign.forward_point_distance: 0.5      # 前瞻距离 (m) -> 增大以平滑轨迹跟踪
+      PathAlign.forward_point_distance: 0.1      # 前瞻距离 (m)
       GoalAlign.scale: 24.0                      # 目标对齐评价函数权重
-      GoalAlign.forward_point_distance: 0.5      # 前瞻距离 (m) -> 增大以平滑轨迹跟踪
+      GoalAlign.forward_point_distance: 0.1      # 前瞻距离 (m)
       PathDist.scale: 32.0                       # 路径距离评价函数权重
       GoalDist.scale: 24.0                       # 目标距离评价函数权重
       RotateToGoal.scale: 32.0                   # 旋转至目标评价函数权重
@@ -214,9 +209,9 @@ controller_server_rclcpp_node:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 50.0                     # 代价地图更新频率 (Hz)
-      publish_frequency: 20.0                    # 代价地图发布频率 (Hz)
-      global_frame: map                          # 全局参考坐标系
+      update_frequency: 20.0                     # 代价地图更新频率 (Hz)
+      publish_frequency: 10.0                    # 代价地图发布频率 (Hz)
+      global_frame: odom                          # 全局参考坐标系
       robot_base_frame: base_link                # 机器人基座坐标系
       use_sim_time: False                        # 是否使用仿真时间
       rolling_window: true                       # 是否使用滚动窗口
@@ -224,7 +219,7 @@ local_costmap:
       height: 5                                  # 代价地图高度 (m)
       resolution: 0.05                           # 代价地图分辨率 (m/cell)
       robot_radius: 0.2                          # 机器人半径 (m)
-      plugins: ["inflation_layer"]  # 图层插件列表（仅保留膨胀层，忽略本地实时障碍物）
+      plugins: ["voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
       
       # ========================
       # 膨胀层 - 在障碍物周围创建缓冲区
@@ -232,8 +227,8 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True                            # 是否启用膨胀层
-        cost_scaling_factor: 4.0                 # 成本缩放因子
-        inflation_radius: 0.4                    # 膨胀半径 (m)
+        cost_scaling_factor: 8.0                 # 成本缩放因子
+        inflation_radius: 0.3                    # 膨胀半径 (m)
       
       # ========================
       # 2D体素层 - 处理激光雷达扫描数据
@@ -245,16 +240,16 @@ local_costmap:
         origin_z: 0.0                            # 原点Z坐标 (m)
         z_resolution: 0.05                       # Z方向分辨率 (m/cell)
         z_voxels: 16                             # Z方向体素数
-        max_obstacle_height: 1.0                 # 最大障碍物高度 (m)
-        mark_threshold: 2                        # 标记阈值 (体素数)
+        max_obstacle_height: 1.8                 # 最大障碍物高度 (m)
+        mark_threshold: 0                        # 标记阈值 (体素数)
         observation_sources: scan                # 观测数据源
         scan:
           topic: /scan                           # 激光扫描话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.01                # 最小障碍物高度 (m) 
-          max_obstacle_height: 1.0               # 最大障碍物高度 (m)
-          clearing: True                         # 是否清除自由空间
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
+          clearing: false                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
           data_type: "LaserScan"                 # 数据类型
       
@@ -268,16 +263,16 @@ local_costmap:
         origin_z: 0.0                            # 原点Z坐标 (m)
         z_resolution: 0.05                       # Z方向分辨率 (m/cell)
         z_voxels: 16                             # Z方向体素数
-        mark_threshold: 3                        # 标记阈值 (体素数)
+        mark_threshold: 1                        # 标记阈值 (体素数)
         observation_sources: livox               # 观测数据源
-        min_obstacle_height: 0.01                # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
-        max_obstacle_height: 1.0                # 最大障碍物高度 (m)
+        min_obstacle_height: 0.2                 # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+        max_obstacle_height: 1.8                 # 最大障碍物高度 (m)
         livox:
           topic: /livox/lidar/pointcloud         # Livox点云话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.01                # 最小障碍物高度 (m) — 忽略地面点
-          max_obstacle_height: 1.0               # 最大障碍物高度 (m)
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面点
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
           data_type: "PointCloud2"               # 数据类型
@@ -308,7 +303,7 @@ global_costmap:
       global_frame: map                          # 全局参考坐标系
       robot_base_frame: base_link                # 机器人基座坐标系
       use_sim_time: False                        # 是否使用仿真时间
-      robot_radius: 0.22                         # 机器人半径 (m) -> 略增安全包络，提高全局绕障余量
+      robot_radius: 0.2                          # 机器人半径 (m)
       resolution: 0.05                           # 代价地图分辨率 (m/cell)
       track_unknown_space: true                  # 是否追踪未知空间
       plugins: ["static_layer", "voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
@@ -324,8 +319,8 @@ global_costmap:
           topic: /scan                           # 激光扫描话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.0               # 最小障碍物高度 (m) -> 降低阈值以识别更低矮障碍
-          max_obstacle_height: 1.0               # 最大障碍物高度 (m)
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m)
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
           data_type: "LaserScan"                 # 数据类型
@@ -340,16 +335,16 @@ global_costmap:
         origin_z: 0.0                            # 原点Z坐标 (m)
         z_resolution: 0.05                       # Z方向分辨率 (m/cell)
         z_voxels: 16                             # Z方向体素数
-        mark_threshold: 3                       # 标记阈值 (体素数)
+        mark_threshold: 1                        # 标记阈值 (体素数)
         observation_sources: livox               # 观测数据源
-        min_obstacle_height: 0.0                # 最小障碍物高度 (m) -> 降低阈值以识别更低矮障碍
-        max_obstacle_height: 1.0                 # 最大障碍物高度 (m)
+        min_obstacle_height: 0.2                # 最小障碍物高度 (m)
+        max_obstacle_height: 2.0                 # 最大障碍物高度 (m)
         livox:
           topic: /livox/lidar/pointcloud         # Livox点云话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.0                # 最小障碍物高度 (m) -> 降低阈值以识别更低矮障碍
-          max_obstacle_height: 1.0                 # 最大障碍物高度 (m)
+          min_obstacle_height: 0.2               # 最小障碍物高度 (m)
+          max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
           data_type: "PointCloud2"               # 数据类型
@@ -367,9 +362,8 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True                            # 是否启用膨胀层
-        cost_scaling_factor: 4.0                 # 成本缩放因子 -> 降低衰减陡峭度，规划器更早远离障碍物
-        inflation_radius: 0.45                   # 膨胀半径 (m) -> 缩小全局绕障缓冲
-        inflate_unknown: True                    # 对未知区域也进行膨胀，提升保守避障能力
+        cost_scaling_factor: 8.0                 # 成本缩放因子
+        inflation_radius: 0.75                    # 膨胀半径 (m)
       
       always_send_full_costmap: True             # 总是发送完整代价地图
   
@@ -410,7 +404,7 @@ map_saver:
 # ========================
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 1.0              # 期望的路径规划频率 (Hz) -> 降低重规划频率以减少抖动
+    expected_planner_frequency: 20.0             # 期望的路径规划频率 (Hz)
     use_sim_time: False                          # 是否使用仿真时间
     planner_plugins: ["GridBased"]               # 路径规划插件列表
     
@@ -419,7 +413,7 @@ planner_server:
     # ========================
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.0                            # 规划容差 (m)
+      tolerance: 0.5                             # 规划容差 (m)
       use_astar: true                           # 是否使用A*算法 (false=Dijkstra)
       allow_unknown: true                        # 是否允许规划经过未知区域
 
@@ -476,7 +470,7 @@ robot_state_publisher:
 waypoint_follower:
   ros__parameters:
     loop_rate: 20                                # 循环频率 (Hz)
-    stop_on_failure: true                       # 失败时是否停止
+    stop_on_failure: false                       # 失败时是否停止
     waypoint_task_executor_plugin: "wait_at_waypoint"  # 路点执行插件
     
     # ========================
@@ -493,7 +487,7 @@ waypoint_follower:
 # ========================
 velocity_smoother:
   ros__parameters:
-    use_sim_time: True                           # 是否使用仿真时间
+    use_sim_time: False                           # 是否使用仿真时间
     smoothing_frequency: 5.0                     # 平滑频率 (Hz)
     scale_velocities: False                      # 是否缩放速度
     feedback: "CLOSED_LOOP"                      # 反馈模式 (CLOSED_LOOP 或 OPEN_LOOP)
@@ -501,33 +495,7 @@ velocity_smoother:
     min_velocity: [-2.5, -2.5, -12.0]           # 最小速度 [vx, vy, wz] (m/s, m/s, rad/s)
     max_accel: [3.0, 3.0, 10.0]                 # 最大加速度 [ax, ay, az] (m/s², m/s², rad/s²)
     max_decel: [-3.0, -3.0, -10.0]              # 最大减速度 [ax, ay, az] (m/s², m/s², rad/s²)
-    odom_topic: "Odometry"                       # 里程计话题
+    odom_topic: "/odom"                       # 里程计话题
     odom_duration: 0.1                           # 里程计数据有效时长 (s)
     deadband_velocity: [0.0, 0.0, 0.0]          # 死区速度 [vx, vy, wz] (m/s, m/s, rad/s)
     velocity_timeout: 1.0                        # 速度超时时长 (s)
-
-# ========================
-# Remove Passed Goals 节点参数
-# 当机器人靠近某个中间点时，移除已通过的目标以避免在每个点上停顿
-# ========================
-nav2_remove_passed_goals_action_bt_node:
-  ros__parameters:
-    use_sim_time: False
-    distance_threshold: 0.05    # 距离阈值 (m) —— 建议 0.3 ~ 0.5，根据底盘尺寸调整
-    angle_threshold: 1.0       # 角度阈值 (rad)，超过该角度不会移除（可选）
-
-# ========================
-# Smoother Server
-# 对全局路径进行平滑，减少折角导致的控制器命令突变
-# ========================
-smoother_server:
-  ros__parameters:
-    use_sim_time: False
-    smoother_plugins:
-    - simple_smoother
-
-    simple_smoother:
-      plugin: nav2_smoother::SimpleSmoother
-      tolerance: 1.0e-10
-      max_its: 1000
-      do_refinement: true

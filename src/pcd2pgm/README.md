@@ -6,16 +6,20 @@
 
 基于 ROS2 和 PCL 库，用于将 `.pcd` 点云文件转换为用于 Navigation 的 `pgm` 栅格地图
 
-|         pcd         |         pgm         |
-| :-----------------: | :-----------------: |
-| ![pcd](.docs/pcd.png) | ![pgm](.docs/pgm.png) |
+|pcd|pgm|
+|:-:|:-:|
+|![pcd](.docs/pcd.png)|![pgm](.docs/pgm.png)|
 
 ## 1. Overview
 
 - 读取指定的 `.pcd` 文件
+
 - 使用 Pass Through 滤波器过滤点云
+
 - 使用 Radius Outlier 滤波器进一步处理点云
+
 - 将处理后的点云转换为占据栅格地图（Occupancy Grid Map）
+
 - 将转换后的地图发布到指定 ROS 话题上
 
 ## 2. Quick Start
@@ -64,7 +68,7 @@ ros2 run nav2_map_server map_saver_cli -f <YOUR_MAP_NAME>
 
 可以通过修改 `pcd2pgm/pcd2pgm.yaml` 文件来配置节点的参数。
 
-```yaml
+  ```yaml
   pcd2pgm:
     ros__parameters:
       pcd_file: /home/lihanchen/NAVIGATION_WS/pcd2pgm/rmuc_2025.pcd   # pcd 文件所在目录
@@ -76,4 +80,4 @@ ros2 run nav2_map_server map_saver_cli -f <YOUR_MAP_NAME>
       thre_z_max: 2.0                                                 # Z轴最大值（用于 Pass Through 滤波器）
       thre_z_min: 0.1                                                 # Z轴最小值（用于 Pass Through 滤波器）
       thres_point_count: 10                                           # 最小点数阈值（用于 Radius Outlier 滤波器）
-```
+  ```

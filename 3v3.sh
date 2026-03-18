@@ -13,7 +13,7 @@ cmds=(
 	"ros2 launch icp_registration icp.launch.py"
 	"ros2 launch rm_navigation bringup_launch.py"
 	"source install/setup.bash
-	ros2 run rm_communication talker --ros-args -p port_name:=/dev/ttyUSB0 -p data_type:=three"
+	ros2 run rm_communication talker"
 	"ros2 topic echo cmd_vel_nav"
 	# "sleep 4 && python3 src/rm_navigation/scripts/send_waypoints.py"
 )

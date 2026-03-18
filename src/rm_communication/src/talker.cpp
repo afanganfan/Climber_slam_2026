@@ -2,7 +2,7 @@
 
 using Action = nav2_msgs::action::NavigateToPose;
 
-ReceiveNode::ReceiveNode() : Node("receive_node"), is_serial_open_(false)
+ReceiveNode::ReceiveNode() : Node("talker"), is_serial_open_(false)
 {
     this->declare_parameter("port_name", "/dev/ttySLAM");
     this->declare_parameter("baud_rate", 115200);
