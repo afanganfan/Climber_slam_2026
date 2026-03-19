@@ -105,8 +105,8 @@ public:
         cand_a.priority = 3;
         cand_a.mode = ZoneMode::MOVE;
         cand_a.has_nav_goal = true;
-        cand_a.goal_x = 4.3;
-        cand_a.goal_y = -0.329;
+        cand_a.goal_x = 4.32;
+        cand_a.goal_y = -1.81;
         if (choose_better(best, cand_a)) best = cand_a;
 
         // 策略 B: 血量低于100，紧急防御（回家）
@@ -115,8 +115,8 @@ public:
         cand_b.priority = 3;
         cand_b.mode = ZoneMode::DEFENSE;
         cand_b.has_nav_goal = true;
-        cand_b.goal_x = -0.67;
-        cand_b.goal_y = 0.67;
+        cand_b.goal_x = -1.05;
+        cand_b.goal_y = 1.44;
         if (choose_better(best, cand_b)) best = cand_b;
 
         // 策略 C: 比赛最后60秒进攻

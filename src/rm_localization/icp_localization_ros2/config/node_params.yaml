@@ -1,7 +1,7 @@
 /icp_localization:
   ros__parameters:
     #pcd_file_path: "/home/fyt/fyt2024-sentry/test.pcd"
-    pcd_file_path: "/home/nucshao/Climber_slam_2026/src/rm_nav_bringup/PCD/RMUL2.pcd"
+    pcd_file_path: "/home/nucshao/Climber_slam_2026/src/rm_nav_bringup/PCD/final.pcd"
     
     icp_localization_ros2:
       range_data_topic: "/cloud_registered_body"

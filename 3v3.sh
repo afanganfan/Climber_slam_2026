@@ -15,7 +15,7 @@ cmds=(
 	"source install/setup.bash
 	ros2 run rm_communication talker"
 	"ros2 topic echo cmd_vel_nav"
-	# "sleep 4 && python3 src/rm_navigation/scripts/send_waypoints.py"
+	"sleep 4 && python3 src/rm_navigation/scripts/send_waypoints.py"
 )
 
 work_dir="/home/nucshao/Climber_slam_2026/"

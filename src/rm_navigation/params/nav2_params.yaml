@@ -121,7 +121,7 @@ controller_server:
     min_x_velocity_threshold: 0.001              # X方向最小速度阈值 (m/s)
     min_y_velocity_threshold: 0.001                # Y方向最小速度阈值 (m/s)
     min_theta_velocity_threshold: 0.001          # 角速度最小阈值 (rad/s)
-    failure_tolerance: 0.3                       # 失败容差
+    failure_tolerance: 0.5                       # 失败容差（放宽，避免短时受阻就停车）
     progress_checker_plugin: "progress_checker"  # 进度检查插件名称
     goal_checker_plugins: ["general_goal_checker"] # 目标检查插件列表
     controller_plugins: ["FollowPath"]            # 路径跟踪控制器插件
@@ -132,8 +132,8 @@ controller_server:
     # ========================
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.2              # 需要的移动半径 (m)
-      movement_time_allowance: 6.0              # 允许的移动时间 (s)
+      required_movement_radius: 0.08             # 需要的移动半径 (m)，减小以避免误判卡死
+      movement_time_allowance: 12.0             # 允许的移动时间 (s)，增加以减少停车
 
     # ========================
     # 目标检查器参数
@@ -169,7 +169,7 @@ controller_server:
       vx_samples: 40                             # X方向速度采样点数
       vy_samples: 40                             # Y方向速度采样点数
       vtheta_samples: 20                         # 角速度采样点数
-      sim_time: 1.7                             # 轨迹模拟时长 (s)
+      sim_time: 1.5                             # 轨迹模拟时长 (s)
       linear_granularity: 0.05                   # 线性采样粒度 (m)
       angular_granularity: 0.025                 # 角度采样粒度 (rad)
       transform_tolerance: 0.2                   # 变换容差 (s)
@@ -178,13 +178,13 @@ controller_server:
       short_circuit_trajectory_evaluation: True  # 是否短路轨迹评估
       stateful: True                             # 是否保存状态
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]  # 评价函数列表
-      BaseObstacle.scale: 0.05                   # 基础障碍物评价函数权重
-      PathAlign.scale: 32.0                      # 路径对齐评价函数权重
-      PathAlign.forward_point_distance: 0.1      # 前瞻距离 (m)
-      GoalAlign.scale: 24.0                      # 目标对齐评价函数权重
-      GoalAlign.forward_point_distance: 0.1      # 前瞻距离 (m)
-      PathDist.scale: 32.0                       # 路径距离评价函数权重
-      GoalDist.scale: 24.0                       # 目标距离评价函数权重
+      BaseObstacle.scale: 0.01                    # 基础障碍物评价函数权重（提高，减少贴障碍抄近道）
+      PathAlign.scale: 64.0                      # 路径对齐评价函数权重（进一步提高，增强贴路径能力）
+      PathAlign.forward_point_distance: 0.15      # 前瞻距离 (m)
+      GoalAlign.scale: 10.0                       # 目标对齐评价函数权重（进一步降低，避免过早抄近路）
+      GoalAlign.forward_point_distance: 0.12      # 前瞻距离 (m)
+      PathDist.scale: 64.0                       # 路径距离评价函数权重（进一步提高，增强回到路径中心线）
+      GoalDist.scale: 10.0                        # 目标距离评价函数权重（进一步降低，优先走路径）
       RotateToGoal.scale: 32.0                   # 旋转至目标评价函数权重
       RotateToGoal.slowing_factor: 5.0           # 旋转减速因子
       RotateToGoal.lookahead_time: -1.0          # 前瞻时间 (-1 表示使用默认值)
@@ -218,7 +218,7 @@ local_costmap:
       width: 5                                   # 代价地图宽度 (m)
       height: 5                                  # 代价地图高度 (m)
       resolution: 0.05                           # 代价地图分辨率 (m/cell)
-      robot_radius: 0.2                          # 机器人半径 (m)
+      robot_radius: 0.4                         # 机器人半径 (m)
       plugins: ["voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
       
       # ========================
@@ -303,7 +303,7 @@ global_costmap:
       global_frame: map                          # 全局参考坐标系
       robot_base_frame: base_link                # 机器人基座坐标系
       use_sim_time: False                        # 是否使用仿真时间
-      robot_radius: 0.2                          # 机器人半径 (m)
+      robot_radius: 0.25                         # 机器人半径 (m)
       resolution: 0.05                           # 代价地图分辨率 (m/cell)
       track_unknown_space: true                  # 是否追踪未知空间
       plugins: ["static_layer", "voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
@@ -362,8 +362,8 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True                            # 是否启用膨胀层
-        cost_scaling_factor: 8.0                 # 成本缩放因子
-        inflation_radius: 0.75                    # 膨胀半径 (m)
+        cost_scaling_factor: 8.0                # 成本缩放因子（更快衰减）
+        inflation_radius: 0.65                   # 膨胀半径 (m)
       
       always_send_full_costmap: True             # 总是发送完整代价地图
   
@@ -450,9 +450,9 @@ recoveries_server:
     robot_base_frame: base_link                  # 机器人基座坐标系
     transform_timeout: 0.1                       # 变换容差 (s)
     use_sim_time: False                          # 是否使用仿真时间
-    simulate_ahead_time: 2.0                     # 前瞻模拟时间 (s)
-    max_rotational_vel: 20.0                     # 最大旋转速度 (rad/s)
-    min_rotational_vel: 0.4                      # 最小旋转速度 (rad/s)
+    simulate_ahead_time: 3.0                     # 前瞻模拟时间 (s)
+    max_rotational_vel: 8.0                      # 最大旋转速度 (rad/s)
+    min_rotational_vel: 0.2                      # 最小旋转速度 (rad/s)
     rotational_acc_lim: 10.0                     # 旋转加速度限制 (rad/s²)
 
 # ========================
