@@ -12,7 +12,7 @@
 namespace rm_communication
 {
 
-enum class ZoneMode : uint8_t { DEFENSE = 0, ATTACK = 1, MOVE = 2 };
+enum class ZoneMode : uint8_t { ATTACK = 1, MOVE = 2, DEFENSE = 3 };
 
 struct RectZone
 {
@@ -63,101 +63,62 @@ public:
     {
         DecisionResult result;
         ZoneMode new_mode = current_mode_;
-        
-        // --- 1. 计算血量变化率 ---
-        double blood_drop_rate = 0.0;
-        if (params.match_time > last_match_time_) {
-            // 计算每秒掉血量 (delta_blood / delta_time)
-            int32_t delta_blood = static_cast<int32_t>(last_blood_) - static_cast<int32_t>(params.our_sentry_blood);
-            uint32_t delta_time = params.match_time - last_match_time_;
-            
-            // 只有在掉血时才计算变化率（回血不计入）
-            if (delta_blood > 0) {
-                blood_drop_rate = static_cast<double>(delta_blood) / delta_time;
+        constexpr double attack_x = 4.32;
+        constexpr double attack_y = -1.81;
+        constexpr double defense_x = -1.05;
+        constexpr double defense_y = 1.44;
+        constexpr double arrive_dist = 0.35;
+        const double arrive_dist_sq = arrive_dist * arrive_dist;
+
+        const auto dist_sq = [](double x1, double y1, double x2, double y2) {
+            const double dx = x1 - x2;
+            const double dy = y1 - y2;
+            return dx * dx + dy * dy;
+        };
+
+        const bool at_attack_point =
+            dist_sq(params.robot_x, params.robot_y, attack_x, attack_y) <= arrive_dist_sq;
+        const bool at_defense_point =
+            dist_sq(params.robot_x, params.robot_y, defense_x, defense_y) <= arrive_dist_sq;
+
+        // 规则1：血量 > 350 -> 导航进攻点，姿态=1
+        if (params.our_sentry_blood > 350)
+        {
+            // 规则4：当处于进攻点且无导航目标时，姿态=2
+            if (at_attack_point)
+            {
+                new_mode = ZoneMode::MOVE;
+                result.has_nav_goal = false;
+            }
+            else
+            {
+                new_mode = ZoneMode::ATTACK;
+                result.has_nav_goal = true;
+                result.goal_x = attack_x;
+                result.goal_y = attack_y;
             }
         }
-
-        // --- 2. 核心逻辑决策（冲突仲裁优先级：A=B=C=D > E > F） ---
-        struct StrategyCandidate
+        // 规则2：血量 < 100 -> 导航防御点，姿态=3
+        else if (params.our_sentry_blood < 100)
         {
-            bool active{false};
-            int priority{0};
-            ZoneMode mode{ZoneMode::MOVE};
-            bool has_nav_goal{false};
-            double goal_x{0.0};
-            double goal_y{0.0};
-        };
-
-        auto choose_better = [](const StrategyCandidate &best, const StrategyCandidate &cand) {
-            if (!cand.active)
-                return false;
-            if (!best.active)
-                return true;
-            return cand.priority > best.priority;
-        };
-
-        // 同级优先级：A/B/C/D 均为 3；E 为 2；F 为 1
-        StrategyCandidate best;
-
-        // 策略 A: 比赛前10秒，开启移动模式
-        StrategyCandidate cand_a;
-        cand_a.active = (params.match_time >= 290);
-        cand_a.priority = 3;
-        cand_a.mode = ZoneMode::MOVE;
-        cand_a.has_nav_goal = true;
-        cand_a.goal_x = 4.32;
-        cand_a.goal_y = -1.81;
-        if (choose_better(best, cand_a)) best = cand_a;
-
-        // 策略 B: 血量低于100，紧急防御（回家）
-        StrategyCandidate cand_b;
-        cand_b.active = (params.our_sentry_blood < 100);
-        cand_b.priority = 3;
-        cand_b.mode = ZoneMode::DEFENSE;
-        cand_b.has_nav_goal = true;
-        cand_b.goal_x = -1.05;
-        cand_b.goal_y = 1.44;
-        if (choose_better(best, cand_b)) best = cand_b;
-
-        // 策略 C: 比赛最后60秒进攻
-        StrategyCandidate cand_c;
-        cand_c.active = (params.match_time <= 60);
-        cand_c.priority = 3;
-        cand_c.mode = ZoneMode::ATTACK;
-        cand_c.has_nav_goal = true;
-        cand_c.goal_x = 4.3;
-        cand_c.goal_y = -0.329;
-        if (choose_better(best, cand_c)) best = cand_c;
-
-        // 策略 D: 根据血量下降速度
-        StrategyCandidate cand_d;
-        cand_d.active = (blood_drop_rate > 5.0);
-        cand_d.priority = 3;
-        cand_d.mode = (blood_drop_rate > 50.0) ? ZoneMode::DEFENSE : ZoneMode::ATTACK;
-        if (choose_better(best, cand_d)) best = cand_d;
-
-        // 策略 E：根据热度值（heat）判断是否进入攻击模式
-        StrategyCandidate cand_e;
-        cand_e.active = (params.enemy_sentry_blood < 60);
-        cand_e.priority = 2;
-        cand_e.mode = ZoneMode::ATTACK;
-        if (choose_better(best, cand_e)) best = cand_e;
-
-        // 策略 F: 默认区域逻辑
-        StrategyCandidate cand_f;
-        cand_f.active = true;
-        cand_f.priority = 1;
-        if (defense_zone_.contains(params.robot_x, params.robot_y))
-            cand_f.mode = ZoneMode::DEFENSE;
+            new_mode = ZoneMode::DEFENSE;
+            if (at_defense_point)
+            {
+                result.has_nav_goal = false;
+            }
+            else
+            {
+                result.has_nav_goal = true;
+                result.goal_x = defense_x;
+                result.goal_y = defense_y;
+            }
+        }
+        // 其它情况：不发导航目标，姿态=2
         else
-            cand_f.mode = ZoneMode::MOVE;
-        if (choose_better(best, cand_f)) best = cand_f;
-
-        // 应用最终策略结果
-        new_mode = best.mode;
-        result.has_nav_goal = best.has_nav_goal;
-        result.goal_x = best.goal_x;
-        result.goal_y = best.goal_y;
+        {
+            new_mode = ZoneMode::MOVE;
+            result.has_nav_goal = false;
+        }
 
         // 更新状态记录
         last_blood_ = params.our_sentry_blood;
@@ -167,9 +128,9 @@ public:
         if (new_mode != current_mode_)
         {
             RCLCPP_INFO(node_->get_logger(), 
-                       "Mode Changed: %d -> %d | Blood: %u | Rate: %.1f",
+                       "Mode Changed: %d -> %d | Blood: %u",
                        static_cast<int>(current_mode_), static_cast<int>(new_mode), 
-                       params.our_sentry_blood, blood_drop_rate);
+                       params.our_sentry_blood);
             current_mode_ = new_mode;
         }
         result.mode = current_mode_;
