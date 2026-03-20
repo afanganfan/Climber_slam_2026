@@ -744,13 +744,18 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
         }
     }
 
+    static bool no_effective_points_reported = false;
     if (effct_feat_num < 1)
     {
         ekfom_data.valid = false;
-        std::cerr << "No Effective Points!" << std::endl;
-        // ROS_WARN("No Effective Points! \n");
+        if (!no_effective_points_reported)
+        {
+            std::cerr << "No Effective Points!" << std::endl;
+            no_effective_points_reported = true;
+        }
         return;
     }
+    no_effective_points_reported = false;
 
     res_mean_last = total_residual / effct_feat_num;
     match_time  += omp_get_wtime() - match_start;
