@@ -250,7 +250,7 @@ void Lddc::InitPointcloud2MsgHeader(PointCloud2 &cloud) {
   cloud.fields[2].count = 1;
   cloud.fields[2].datatype = PointField::FLOAT32;
   cloud.fields[3].offset = 12;
-  cloud.fields[3].name = "intensity";
+  cloud.fields[3].name = "reflectivity";
   cloud.fields[3].count = 1;
   cloud.fields[3].datatype = PointField::FLOAT32;
   cloud.fields[4].offset = 16;
@@ -509,7 +509,7 @@ Lddc::GetCurrentPublisher2(uint8_t handle) {
         global_pub_ =
             cur_node_->create_publisher<CustomMsg>(topic_name, queue_size);
         global_pub_2_ = cur_node_->create_publisher<PointCloud2>(
-            "livox/lidar/pointcloud", queue_size);
+            "/livox/lidar/pointcloud", queue_size);
         DRIVER_INFO(*cur_node_, "%s publish use pointcloud2 and custom format",
                     topic_name.c_str());
       } else {

@@ -28,7 +28,7 @@ CMDS=(
     "ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py"
     "ros2 launch icp_registration icp.launch.py"
     "ros2 launch rm_navigation bringup_launch.py"
-    "ros2 run rm_communication talker --ros-args -p data_type:=three"
+    "source install/setup.bash; ros2 run rm_communication talker --ros-args -p data_type:=three"
 )
 
 mkdir -p "${LOG_DIR}"

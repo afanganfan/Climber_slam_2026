@@ -7,8 +7,8 @@ cmds=(  "ros2 launch rm_bringup bringup.launch.py"
 	"ros2 launch imu_complementary_filter complementary_filter.launch.py"
 	"ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py"
 	"ros2 launch rm_navigation online_async_launch.py"
-	"ros2 launch rm_navigation bringup_no_amcl_launch.py")
-
+	"ros2 launch rm_navigation bringup_no_amcl_launch.py"
+	"sleep 40 && timestamp_unit")
 for cmd in "${cmds[@]}"
 do
 	echo Current CMD : "$cmd"
