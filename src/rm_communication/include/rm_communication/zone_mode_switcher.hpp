@@ -63,15 +63,10 @@ public:
     {
         DecisionResult result;
         ZoneMode new_mode = current_mode_;
-        // constexpr double attack_x = 4.32;
-        // constexpr double attack_y = -1.81;
-        // constexpr double defense_x = -1.05;
-        // constexpr double defense_y = 1.44;
-        // constexpr double arrive_dist = 0.35;
-        constexpr double attack_x = 2.36;
-        constexpr double attack_y = 0.517;
-        constexpr double defense_x = -1.69;
-        constexpr double defense_y = 0.2333;
+        constexpr double attack_x = 4.32;
+        constexpr double attack_y = -1.63;
+        constexpr double defense_x = -1.05;
+        constexpr double defense_y = 1.44;
         constexpr double arrive_dist = 0.35;
         const double arrive_dist_sq = arrive_dist * arrive_dist;
 
@@ -94,8 +89,8 @@ public:
             {
                 new_mode = ZoneMode::MOVE;
                 result.has_nav_goal = false;
-            }
-            else
+            }                     
+            else          
             {
                 new_mode = ZoneMode::ATTACK;
                 result.has_nav_goal = true;
@@ -118,7 +113,7 @@ public:
                 result.goal_y = defense_y;
             }
         }
-        // 其它情况：不发导航目标，姿态=2
+        // 其它情况：不发导航目标，姿态=1
         else
         {
             new_mode = ZoneMode::ATTACK;
