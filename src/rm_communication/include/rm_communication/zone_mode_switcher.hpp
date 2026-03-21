@@ -47,12 +47,12 @@ class ZoneModeSwitcher
 {
 public:
     ZoneModeSwitcher(rclcpp::Node *node,
-                                         RectZone defense = RectZone{2.6, 5.9, -5.65, 2.3})
+                     RectZone defense = RectZone{2.6, 5.9, -5.65, 2.3})
         : node_(node), 
           tf_buffer_(std::make_shared<tf2_ros::Buffer>(node_->get_clock())),
           tf_listener_(*tf_buffer_), 
           defense_zone_(defense),
-          last_blood_(400), // 初始血量，根据实际车型调整
+          last_blood_(400),
           last_match_time_(300)
     {
         current_mode_ = ZoneMode::MOVE;
@@ -63,15 +63,18 @@ public:
     {
         DecisionResult result;
         ZoneMode new_mode = current_mode_;
+
         constexpr double attack_x = 4.32;
         constexpr double attack_y = -1.63;
         constexpr double defense_x = -1.05;
         constexpr double defense_y = 1.44;
+
         // 姿态2巡航点（两个点来回）
-        constexpr double patrol_a_x = 3.42;                    ;
+        constexpr double patrol_a_x = 3.42;
         constexpr double patrol_a_y = -3.39;
         constexpr double patrol_b_x = 3.46;
         constexpr double patrol_b_y = 0.536;
+
         constexpr double arrive_dist = 0.35;
         const double arrive_dist_sq = arrive_dist * arrive_dist;
 
@@ -87,48 +90,53 @@ public:
             dist_sq(params.robot_x, params.robot_y, defense_x, defense_y) <= arrive_dist_sq;
 
         // 当前巡航目标点
-        const double patrol_target_x = (patrol_target_index_ == 0) ? patrol_a_x : patrol_b_x;
-        const double patrol_target_y = (patrol_target_index_ == 0) ? patrol_a_y : patrol_b_y;
+        double patrol_target_x = (patrol_target_index_ == 0) ? patrol_a_x : patrol_b_x;
+        double patrol_target_y = (patrol_target_index_ == 0) ? patrol_a_y : patrol_b_y;
         const bool at_patrol_target =
             dist_sq(params.robot_x, params.robot_y, patrol_target_x, patrol_target_y) <= arrive_dist_sq;
 
-        // 规则1：血量 > 350 -> 导航进攻点，姿态=1
-        if (params.our_sentry_blood > 350)
+        // 规则1：血量 >= 350 -> 先去进攻点，达到后开始巡航
+        if (params.our_sentry_blood >= 350)
         {
-            // 规则4：当处于进攻点时，进入姿态2并在两个巡航点之间往返
-            if (at_attack_point)
+            if (!attack_reached_)
             {
-                new_mode = ZoneMode::MOVE;
-                if (!patrol_initialized_ || current_mode_ != ZoneMode::MOVE)
+                if (at_attack_point)
                 {
-                    patrol_target_index_ = 0;
+                    attack_reached_ = true;
                     patrol_initialized_ = true;
+                    patrol_target_index_ = 0;
                 }
-
-                // 到达当前巡航目标后切换到另一个点，实现来回巡航
-                if (at_patrol_target)
+                else
                 {
-                    patrol_target_index_ = 1 - patrol_target_index_;
+                    new_mode = ZoneMode::ATTACK;
+                    result.has_nav_goal = true;
+                    result.goal_x = attack_x;
+                    result.goal_y = attack_y;
+                    goto finalize;
                 }
-
-                result.has_nav_goal = true;
-                result.goal_x = (patrol_target_index_ == 0) ? patrol_a_x : patrol_b_x;
-                result.goal_y = (patrol_target_index_ == 0) ? patrol_a_y : patrol_b_y;
-            }                     
-            else          
-            {
-                new_mode = ZoneMode::ATTACK;
-                result.has_nav_goal = true;
-                result.goal_x = attack_x;
-                result.goal_y = attack_y;
-                patrol_initialized_ = false;
             }
+
+            // 已到达过进攻点：开始巡航
+            new_mode = ZoneMode::MOVE;
+
+            if (at_patrol_target)
+            {
+                patrol_target_index_ = 1 - patrol_target_index_;
+                patrol_target_x = (patrol_target_index_ == 0) ? patrol_a_x : patrol_b_x;
+                patrol_target_y = (patrol_target_index_ == 0) ? patrol_a_y : patrol_b_y;
+            }
+
+            result.has_nav_goal = true;
+            result.goal_x = patrol_target_x;
+            result.goal_y = patrol_target_y;
         }
-        // 规则2：血量 < 100 -> 导航防御点，姿态=3
+        // 规则2：血量 < 100 -> 回防御点
         else if (params.our_sentry_blood < 100)
         {
             new_mode = ZoneMode::DEFENSE;
             patrol_initialized_ = false;
+            attack_reached_ = false;
+
             if (at_defense_point)
             {
                 result.has_nav_goal = false;
@@ -140,19 +148,20 @@ public:
                 result.goal_y = defense_y;
             }
         }
-        // 其它情况：不发导航目标，姿态=1
+        // 其它情况：不下发导航目标
         else
         {
             new_mode = ZoneMode::ATTACK;
             result.has_nav_goal = false;
             patrol_initialized_ = false;
+            attack_reached_ = false;
         }
 
+    finalize:
         // 更新状态记录
         last_blood_ = params.our_sentry_blood;
         last_match_time_ = params.match_time;
 
-        // 状态变更日志
         if (new_mode != current_mode_)
         {
             RCLCPP_INFO(node_->get_logger(), 
@@ -165,7 +174,6 @@ public:
         return result;
     }
 
-    // 从 TF 中获取机器人坐标，用于独立决策（可选）
     bool get_robot_pose(double &x, double &y)
     {
         try
@@ -191,13 +199,14 @@ private:
     RectZone defense_zone_;
     ZoneMode current_mode_;
 
-    // 新增：用于计算变化率的状态变量
     uint16_t last_blood_;
     uint32_t last_match_time_;
 
-    // 姿态2巡航状态
     int patrol_target_index_{0}; // 0 -> A点, 1 -> B点
     bool patrol_initialized_{false};
+
+    // 是否已到达过进攻点
+    bool attack_reached_{false};
 };
 
 } // namespace rm_communication
