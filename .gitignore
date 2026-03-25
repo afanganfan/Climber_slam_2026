@@ -40,6 +40,10 @@ build/
 devel/
 install/
 log/
+logs/
+
+# 运行资产与日志
+assets/
 
 # 大文件
 *.pcd

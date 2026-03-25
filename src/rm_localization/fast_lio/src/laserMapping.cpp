@@ -743,7 +743,6 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
             effct_feat_num ++;
         }
     }
-
     static bool no_effective_points_reported = false;
     if (effct_feat_num < 1)
     {

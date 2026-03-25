@@ -28,7 +28,7 @@ amcl:
     pf_err: 0.03                                 # 粒子滤波器误差阈值
     pf_z: 0.99                                   # 粒子滤波器质量参数
     recovery_alpha_fast: 0.1                     # 快速恢复参数 (均匀分布混合率)
-    recovery_alpha_slow: 0.001                   # 慢速恢复参数 (均匀分布混合率)
+    recovery_alpha_slow: 0.001                     # 慢速恢复参数 (均匀分布混合率)
     resample_interval: 1                         # 重采样间隔 (扫描数)
     robot_model_type: "nav2_amcl::OmniMotionModel"  # 机器人运动模型 (全向运动模型)
     save_pose_rate: 0.5                          # 保存姿态的频率 (Hz)
@@ -42,7 +42,7 @@ amcl:
       yaw: 0.0
     always_reset_initial_pose: false             # 重启 AMCL 时不强制重置
     transform_tolerance: 0.3                     # 变换容差 (s)
-    update_min_a: 0.05                           # 更新时最小旋转 (rad)
+    update_min_a: 0.05                            # 更新时最小旋转 (rad)
     update_min_d: 0.05                           # 更新时最小平移 (m)
     z_hit: 0.7                                   # 命中部分的混合权重
     z_max: 0.05                                  # 最大范围部分的混合权重
@@ -140,7 +140,7 @@ controller_server:
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.05             # 需要的移动半径 (m)，减小以避免误判卡死
-      movement_time_allowance: 20.0              # 允许的移动时间 (s)，增加以减少停车
+      movement_time_allowance: 20.0             # 允许的移动时间 (s)，增加以减少停车
 
     # ========================
     # 目标检查器参数
@@ -164,19 +164,19 @@ controller_server:
       max_vel_x: 1.0                             # X方向最大速度 (m/s)
       max_vel_y: 1.0                             # Y方向最大速度 (m/s)
       max_vel_theta: 0.0                        # 最大角速度 (rad/s)
-      min_speed_xy: 0.0                          # XY最小速度 (m/s)
+      min_speed_xy: 0.0                         # XY最小速度 (m/s)
       max_speed_xy: 1.2                          # XY最大速度 (m/s)
       min_speed_theta: 0.0                     # 最小角速度 (rad/s)
       acc_lim_x: 2.0                             # X方向最大加速度 (m/s²)
       acc_lim_y: 2.0                             # Y方向最大加速度 (m/s²)
-      acc_lim_theta: 4.0                         # 最大角加速度 (rad/s²)
+      acc_lim_theta: 4.0                        # 最大角加速度 (rad/s²)
       decel_lim_x: -2.5                          # X方向最大减速度 (m/s²)
       decel_lim_y: -2.5                          # Y方向最大减速度 (m/s²)
-      decel_lim_theta: -4.0                      # 最大角减速度 (rad/s²)
+      decel_lim_theta: -4.0                     # 最大角减速度 (rad/s²)
       vx_samples: 30                             # X方向速度采样点数
       vy_samples: 30                             # Y方向速度采样点数
       vtheta_samples: 20                         # 角速度采样点数
-      sim_time: 1.0                              # 轨迹模拟时长 (s)
+      sim_time: 1.0                             # 轨迹模拟时长 (s)
       linear_granularity: 0.05                   # 线性采样粒度 (m)
       angular_granularity: 0.025                 # 角度采样粒度 (rad)
       transform_tolerance: 0.1                   # 变换容差 (s)
@@ -188,20 +188,20 @@ controller_server:
       BaseObstacle.scale: 0.01                    # 基础障碍物评价函数权重（提高，减少贴障碍抄近道）
       PathAlign.scale: 64.0                      # 路径对齐评价函数权重（进一步提高，增强贴路径能力）
       PathAlign.forward_point_distance: 0.15      # 前瞻距离 (m)
-      GoalAlign.scale: 6.0                        # 目标对齐评价函数权重（进一步降低，避免过早抄近路）
+      GoalAlign.scale: 10.0                       # 目标对齐评价函数权重（进一步降低，避免过早抄近路）
       GoalAlign.forward_point_distance: 0.12      # 前瞻距离 (m)
       PathDist.scale: 64.0                       # 路径距离评价函数权重（进一步提高，增强回到路径中心线）
-      GoalDist.scale: 6.0                         # 目标距离评价函数权重（进一步降低，优先走路径）
+      GoalDist.scale: 6.0                        # 目标距离评价函数权重（进一步降低，优先走路径）
       RotateToGoal.scale: 32.0                   # 旋转至目标评价函数权重
       RotateToGoal.slowing_factor: 5.0           # 旋转减速因子
       RotateToGoal.lookahead_time: -1.0          # 前瞻时间 (-1 表示使用默认值)
       shrink_horizon_backup: true                # 是否收缩地平线备份
-      shrink_horizon_min_duration: 2.0           # 收缩地平线最小持续时间 (s)
+      shrink_horizon_min_duration: 2.0          # 收缩地平线最小持续时间 (s)
       oscillation_recovery: true                 # 是否启用振荡恢复
       oscillation_v_eps: 0.1                     # 振荡速度阈值 (m/s)
       oscillation_omega_eps: 0.1                 # 振荡角速度阈值 (rad/s)
-      oscillation_recovery_min_duration: 2.0     # 振荡恢复最小持续时间 (s)
-      oscillation_filter_duration: 2.0           # 振荡过滤持续时间 (s)
+      oscillation_recovery_min_duration: 2.0    # 振荡恢复最小持续时间 (s)
+      oscillation_filter_duration: 2.0          # 振荡过滤持续时间 (s)
 # ========================
 # 控制器服务器 RCL CPP 节点配置
 # ========================
@@ -234,8 +234,8 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True                            # 是否启用膨胀层
-        cost_scaling_factor: 12.0                # 成本缩放因子（提高=代价衰减更快，局部代价影响更弱）
-        inflation_radius: 0.2                    # 膨胀半径 (m)（减小=局部代价权重更低）
+        cost_scaling_factor: 12.0                 # 成本缩放因子
+        inflation_radius: 0.2                    # 膨胀半径 (m)
       
       # ========================
       # 2D体素层 - 处理激光雷达扫描数据
@@ -256,7 +256,7 @@ local_costmap:
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
           min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
-          clearing: True                         # 是否清除自由空间
+          clearing: true                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
           data_type: "LaserScan"                 # 数据类型
       
@@ -495,7 +495,7 @@ waypoint_follower:
 velocity_smoother:
   ros__parameters:
     use_sim_time: False                           # 是否使用仿真时间
-    smoothing_frequency: 20.0                    # 平滑频率 (Hz)
+    smoothing_frequency: 20.0                     # 平滑频率 (Hz)
     scale_velocities: False                      # 是否缩放速度
     feedback: "CLOSED_LOOP"                      # 反馈模式 (CLOSED_LOOP 或 OPEN_LOOP)
     max_velocity: [1.0, 1.0, 4.0]               # 最大速度 [vx, vy, wz] (m/s, m/s, rad/s)
@@ -503,6 +503,6 @@ velocity_smoother:
     max_accel: [2.0, 2.0, 4.0]                  # 最大加速度 [ax, ay, az] (m/s², m/s², rad/s²)
     max_decel: [-2.5, -2.5, -4.0]               # 最大减速度 [ax, ay, az] (m/s², m/s², rad/s²)
     odom_topic: "/odom"                       # 里程计话题
-    odom_duration: 0.05                          # 里程计数据有效时长 (s)
+    odom_duration: 0.05                           # 里程计数据有效时长 (s)
     deadband_velocity: [0.0, 0.0, 0.0]          # 死区速度 [vx, vy, wz] (m/s, m/s, rad/s)
     velocity_timeout: 0.5                        # 速度超时时长 (s)
