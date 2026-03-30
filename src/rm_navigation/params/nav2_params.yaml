@@ -42,7 +42,7 @@ amcl:
       yaw: 0.0
     always_reset_initial_pose: false             # 重启 AMCL 时不强制重置
     transform_tolerance: 0.3                     # 变换容差 (s)
-    update_min_a: 0.05                            # 更新时最小旋转 (rad)
+    update_min_a: 0.05                           # 更新时最小旋转 (rad)
     update_min_d: 0.05                           # 更新时最小平移 (m)
     z_hit: 0.7                                   # 命中部分的混合权重
     z_max: 0.05                                  # 最大范围部分的混合权重
@@ -124,9 +124,9 @@ bt_navigator_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: False                          # 是否使用仿真时间
-    controller_frequency: 30.0                    # 控制器运行频率 (Hz)
+    controller_frequency: 30.0                   # 控制器运行频率 (Hz)
     min_x_velocity_threshold: 0.001              # X方向最小速度阈值 (m/s)
-    min_y_velocity_threshold: 0.001                # Y方向最小速度阈值 (m/s)
+    min_y_velocity_threshold: 0.001              # Y方向最小速度阈值 (m/s)
     min_theta_velocity_threshold: 0.001          # 角速度最小阈值 (rad/s)
     failure_tolerance: 1.0                       # 失败容差（放宽，避免短时受阻就停车）
     progress_checker_plugin: "progress_checker"  # 进度检查插件名称
@@ -140,7 +140,7 @@ controller_server:
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.05             # 需要的移动半径 (m)，减小以避免误判卡死
-      movement_time_allowance: 20.0             # 允许的移动时间 (s)，增加以减少停车
+      movement_time_allowance: 20.0              # 允许的移动时间 (s)，增加以减少停车
 
     # ========================
     # 目标检查器参数
@@ -150,7 +150,7 @@ controller_server:
       stateful: True                             # 是否保存状态
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.25                    # XY平面目标容差 (m)
-      yaw_goal_tolerance: 0.8                   # 偏航角目标容差 (rad)
+      yaw_goal_tolerance: 0.8                    # 偏航角目标容差 (rad)
     
     # ========================
     # DWB (动态窗口法) 局部路径规划器参数
@@ -163,20 +163,20 @@ controller_server:
       min_vel_y: -0.8                            # Y方向最小速度 (m/s)
       max_vel_x: 1.0                             # X方向最大速度 (m/s)
       max_vel_y: 1.0                             # Y方向最大速度 (m/s)
-      max_vel_theta: 0.0                        # 最大角速度 (rad/s)
-      min_speed_xy: 0.0                         # XY最小速度 (m/s)
+      max_vel_theta: 0.0                         # 最大角速度 (rad/s)
+      min_speed_xy: 0.0                          # XY最小速度 (m/s)
       max_speed_xy: 1.2                          # XY最大速度 (m/s)
-      min_speed_theta: 0.0                     # 最小角速度 (rad/s)
+      min_speed_theta: 0.0                       # 最小角速度 (rad/s)
       acc_lim_x: 2.0                             # X方向最大加速度 (m/s²)
       acc_lim_y: 2.0                             # Y方向最大加速度 (m/s²)
-      acc_lim_theta: 4.0                        # 最大角加速度 (rad/s²)
+      acc_lim_theta: 4.0                         # 最大角加速度 (rad/s²)
       decel_lim_x: -2.5                          # X方向最大减速度 (m/s²)
       decel_lim_y: -2.5                          # Y方向最大减速度 (m/s²)
-      decel_lim_theta: -4.0                     # 最大角减速度 (rad/s²)
+      decel_lim_theta: -4.0                      # 最大角减速度 (rad/s²)
       vx_samples: 30                             # X方向速度采样点数
       vy_samples: 30                             # Y方向速度采样点数
       vtheta_samples: 20                         # 角速度采样点数
-      sim_time: 1.0                             # 轨迹模拟时长 (s)
+      sim_time: 1.0                              # 轨迹模拟时长 (s)
       linear_granularity: 0.05                   # 线性采样粒度 (m)
       angular_granularity: 0.025                 # 角度采样粒度 (rad)
       transform_tolerance: 0.1                   # 变换容差 (s)
@@ -185,23 +185,23 @@ controller_server:
       short_circuit_trajectory_evaluation: True  # 是否短路轨迹评估
       stateful: True                             # 是否保存状态
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]  # 评价函数列表
-      BaseObstacle.scale: 0.01                    # 基础障碍物评价函数权重（提高，减少贴障碍抄近道）
+      BaseObstacle.scale: 0.01                   # 基础障碍物评价函数权重（提高，减少贴障碍抄近道）
       PathAlign.scale: 64.0                      # 路径对齐评价函数权重（进一步提高，增强贴路径能力）
-      PathAlign.forward_point_distance: 0.15      # 前瞻距离 (m)
-      GoalAlign.scale: 10.0                       # 目标对齐评价函数权重（进一步降低，避免过早抄近路）
-      GoalAlign.forward_point_distance: 0.12      # 前瞻距离 (m)
+      PathAlign.forward_point_distance: 0.15     # 前瞻距离 (m)
+      GoalAlign.scale: 10.0                      # 目标对齐评价函数权重（进一步降低，避免过早抄近路）
+      GoalAlign.forward_point_distance: 0.12     # 前瞻距离 (m)
       PathDist.scale: 64.0                       # 路径距离评价函数权重（进一步提高，增强回到路径中心线）
       GoalDist.scale: 6.0                        # 目标距离评价函数权重（进一步降低，优先走路径）
       RotateToGoal.scale: 32.0                   # 旋转至目标评价函数权重
       RotateToGoal.slowing_factor: 5.0           # 旋转减速因子
       RotateToGoal.lookahead_time: -1.0          # 前瞻时间 (-1 表示使用默认值)
       shrink_horizon_backup: true                # 是否收缩地平线备份
-      shrink_horizon_min_duration: 2.0          # 收缩地平线最小持续时间 (s)
+      shrink_horizon_min_duration: 2.0           # 收缩地平线最小持续时间 (s)
       oscillation_recovery: true                 # 是否启用振荡恢复
       oscillation_v_eps: 0.1                     # 振荡速度阈值 (m/s)
       oscillation_omega_eps: 0.1                 # 振荡角速度阈值 (rad/s)
-      oscillation_recovery_min_duration: 2.0    # 振荡恢复最小持续时间 (s)
-      oscillation_filter_duration: 2.0          # 振荡过滤持续时间 (s)
+      oscillation_recovery_min_duration: 2.0     # 振荡恢复最小持续时间 (s)
+      oscillation_filter_duration: 2.0           # 振荡过滤持续时间 (s)
 # ========================
 # 控制器服务器 RCL CPP 节点配置
 # ========================
@@ -218,14 +218,14 @@ local_costmap:
     ros__parameters:
       update_frequency: 50.0                     # 代价地图更新频率 (Hz)
       publish_frequency: 30.0                    # 代价地图发布频率 (Hz)
-      global_frame: odom                          # 全局参考坐标系
+      global_frame: odom                         # 全局参考坐标系
       robot_base_frame: base_link                # 机器人基座坐标系
       use_sim_time: False                        # 是否使用仿真时间
       rolling_window: true                       # 是否使用滚动窗口
       width: 5                                   # 代价地图宽度 (m)
       height: 5                                  # 代价地图高度 (m)
       resolution: 0.05                           # 代价地图分辨率 (m/cell)
-      robot_radius: 0.4                         # 机器人半径 (m)
+      robot_radius: 0.4                          # 机器人半径 (m)
       plugins: ["voxel2d_layer", "voxel3d_layer", "inflation_layer"]  # 图层插件列表
       
       # ========================
@@ -234,7 +234,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True                            # 是否启用膨胀层
-        cost_scaling_factor: 12.0                 # 成本缩放因子
+        cost_scaling_factor: 12.0                # 成本缩放因子
         inflation_radius: 0.2                    # 膨胀半径 (m)
       
       # ========================

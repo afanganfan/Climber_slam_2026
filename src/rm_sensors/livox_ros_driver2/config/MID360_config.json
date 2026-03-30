@@ -31,8 +31,8 @@
       "blind_spot_set": 80,
       "extrinsic_parameter" : {
         "roll": 0.0,
-        "pitch": 45,
-        "yaw": 90,
+        "pitch": -45,
+        "yaw": -90,
         "x": -180,
         "y": 0,
         "z": 0

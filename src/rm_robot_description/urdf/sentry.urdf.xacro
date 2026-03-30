@@ -1,65 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
 <robot name="sentry" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <!-- Base links -->
-  <link name="livox_frame" />
-  <link name="gimbal_link" />
-  <link name="base_link" />
+  <material name="blue">
+    <color rgba="0 0 0.8 1"/>
+  </material>
+  <material name="black">
+    <color rgba="0 0 0 1"/>
+  </material>
+  <material name="white">
+    <color rgba="1 1 1 1"/>
+  </material>
+
   <link name="base_footprint" />
 
-  <!-- Base joints -->
-  <joint name="livox_to_gimbal_joint" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0" />
-    <parent link="livox_frame" />
-    <child link="gimbal_link" />
-    <axis xyz="0 0 0" />
-  </joint>
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.5925 0.5925 0.05" />
+      </geometry>
+      <material name="blue" />
+    </visual>
+  </link>
 
-  <joint name="base_joint" type="fixed">
-    <parent link="gimbal_link"/>
-    <child link="base_link" />
-    <origin xyz="-0.22 -0.11 0.12" rpy="0 0 0"/>
-  </joint>
+  <link name="gimbal_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.05" length="0.1" />
+      </geometry>
+      <material name="white" />
+    </visual>
+  </link>
+
+  <link name="livox_frame">
+    <visual>
+      <geometry>
+        <box size="0.1 0.06 0.06" />
+      </geometry>
+      <material name="black" />
+    </visual>
+  </link>
+
+  <xacro:macro name="wheel_link" params="name">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.5707 0 0" />
+        <geometry>
+          <cylinder radius="0.075" length="0.04" /> </geometry>
+        <material name="black" />
+      </visual>
+    </link>
+  </xacro:macro>
+
+  <xacro:wheel_link name="wheel_front_left" />
+  <xacro:wheel_link name="wheel_front_right" />
+  <xacro:wheel_link name="wheel_back_left" />
+  <xacro:wheel_link name="wheel_back_right" />
 
   <joint name="base_footprint_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="base_footprint" />
-    <origin xyz="0 0 -0.722" rpy="0 0 0"/>
+    <parent link="base_footprint"/>
+    <child link="base_link" />
+    <origin xyz="0 0 0.025" rpy="0 0 0"/>
   </joint>
 
-  <!-- Define omni wheels -->
-  <link name="wheel_front_left" />
-  <link name="wheel_front_right" />
-  <link name="wheel_back_left" />
-  <link name="wheel_back_right" />
+  <joint name="base_to_gimbal_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="gimbal_link" />
+    <origin xyz="0 0 0.406" rpy="0 0 0"/>
+  </joint>
 
-  <!-- Define joints for omni wheels -->
+  <joint name="gimbal_to_livox_joint" type="fixed">
+    <parent link="gimbal_link"/>
+    <child link="livox_frame" />
+    <origin xyz="0.17 0 -0.101" rpy="0 0 0"/>
+  </joint>
+
   <joint name="joint_wheel_front_left" type="continuous">
     <parent link="base_link" />
     <child link="wheel_front_left" />
-    <origin xyz="0.3 0.2 0" rpy="0 0 0" />
+    <origin xyz="0.25 0.296 -0.025" rpy="0 0 0" />
     <axis xyz="0 1 0" />
   </joint>
 
   <joint name="joint_wheel_front_right" type="continuous">
     <parent link="base_link" />
     <child link="wheel_front_right" />
-    <origin xyz="0.3 -0.2 0" rpy="0 0 0" />
+    <origin xyz="0.25 -0.296 -0.025" rpy="0 0 0" />
     <axis xyz="0 1 0" />
   </joint>
 
   <joint name="joint_wheel_back_left" type="continuous">
     <parent link="base_link" />
     <child link="wheel_back_left" />
-    <origin xyz="-0.3 0.2 0" rpy="0 0 0" />
+    <origin xyz="-0.25 0.296 -0.025" rpy="0 0 0" />
     <axis xyz="0 1 0" />
   </joint>
 
   <joint name="joint_wheel_back_right" type="continuous">
     <parent link="base_link" />
     <child link="wheel_back_right" />
-    <origin xyz="-0.3 -0.2 0" rpy="0 0 0" />
+    <origin xyz="-0.25 -0.296 -0.025" rpy="0 0 0" />
     <axis xyz="0 1 0" />
   </joint>
 
-</robot> 
+</robot>
