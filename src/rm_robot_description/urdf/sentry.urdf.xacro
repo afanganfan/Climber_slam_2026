@@ -72,7 +72,7 @@
   <joint name="gimbal_to_livox_joint" type="fixed">
     <parent link="gimbal_link"/>
     <child link="livox_frame" />
-    <origin xyz="0.17 0 -0.101" rpy="0 0 0"/>
+    <origin xyz="0 0.17 -0.101" rpy="0 0.7854 1.5708"/>
   </joint>
 
   <joint name="joint_wheel_front_left" type="continuous">

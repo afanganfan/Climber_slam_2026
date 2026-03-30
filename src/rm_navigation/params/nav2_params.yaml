@@ -254,7 +254,7 @@ local_costmap:
           topic: /scan                           # 激光扫描话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+          min_obstacle_height: 0.10               # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: true                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
@@ -272,13 +272,13 @@ local_costmap:
         z_voxels: 16                             # Z方向体素数
         mark_threshold: 1                        # 标记阈值 (体素数)
         observation_sources: livox               # 观测数据源
-        min_obstacle_height: 0.2                 # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
+        min_obstacle_height: 0.10                 # 最小障碍物高度 (m) — 忽略地面返回，按需要调整
         max_obstacle_height: 1.8                 # 最大障碍物高度 (m)
         livox:
           topic: /livox/lidar/pointcloud         # Livox点云话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.2               # 最小障碍物高度 (m) — 忽略地面点
+          min_obstacle_height: 0.10               # 最小障碍物高度 (m) — 忽略地面点
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
@@ -326,7 +326,7 @@ global_costmap:
           topic: /scan                           # 激光扫描话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.2               # 最小障碍物高度 (m)
+          min_obstacle_height: 0.10               # 最小障碍物高度 (m)
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物
@@ -344,13 +344,13 @@ global_costmap:
         z_voxels: 16                             # Z方向体素数
         mark_threshold: 1                        # 标记阈值 (体素数)
         observation_sources: livox               # 观测数据源
-        min_obstacle_height: 0.2                # 最小障碍物高度 (m)
-        max_obstacle_height: 2.0                 # 最大障碍物高度 (m)
+        min_obstacle_height: 0.10                # 最小障碍物高度 (m)
+        max_obstacle_height: 1.8                 # 最大障碍物高度 (m)
         livox:
           topic: /livox/lidar/pointcloud         # Livox点云话题
           raytrace_min_range: 0.0                # 射线追踪最小范围 (m)
           raytrace_max_range: 50.0               # 射线追踪最大范围 (m)
-          min_obstacle_height: 0.2               # 最小障碍物高度 (m)
+          min_obstacle_height: 0.10               # 最小障碍物高度 (m)
           max_obstacle_height: 1.8               # 最大障碍物高度 (m)
           clearing: True                         # 是否清除自由空间
           marking: True                          # 是否标记障碍物

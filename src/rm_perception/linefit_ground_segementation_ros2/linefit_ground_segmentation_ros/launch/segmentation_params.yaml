@@ -2,26 +2,26 @@ ground_segmentation:
   ros__parameters:
     n_threads: 4                # 使用的线程数（并行处理能力）
 
-    r_min: 0.2                  # 最小点距（单位：米），小于该距离的点会被忽略
+    r_min: 0.45                  # 最小点距（单位：米），小于该距离的点会被忽略
     r_max: 6                   # 最大点距（单位：米），超过该距离的点会被忽略
     n_bins: 120                 # 径向 bin 数（按距离离散的分桶数量）
     n_segments: 360             # 角向 segment 数（按方位角离散的扇区数量）
 
-    max_dist_to_line: 0.1      # 点到地面拟合线的最大垂直距离（米），小于该值可判为地面
+    max_dist_to_line: 0.05      # 点到地面拟合线的最大垂直距离（米），小于该值可判为地面
 
-    sensor_height: 0.35         # 传感器离地高度（单位：米）
+    sensor_height: 0.33         # 传感器离地高度（单位：米）
     min_slope: 0.0              # 地面线最小坡度阈值
-    max_slope: 0.3              # 地面线最大坡度阈值
+    max_slope: 0.2              # 地面线最大坡度阈值
     max_fit_error: 0.05         # 线拟合时单点允许的最大误差（米）
     long_threshold: 1.0         # 相邻点间距超过该值（米）时视为“远间隔”
     max_long_height: 0.1        # 远间隔情况下与前一点允许的最大高度变化（米）
-    max_start_height: 0.2       # 启动新地面线时，相对估计地面高度允许的最大差值（米）
+    max_start_height: 0.1       # 启动新地面线时，相对估计地面高度允许的最大差值（米）
     line_search_angle: 0.1      # 在角度方向搜索邻近线段的范围（单位：弧度）
 
-    gravity_aligned_frame: ""   # 重力对齐坐标系（z 轴与重力方向一致）；留空则使用传感器坐标系
+    gravity_aligned_frame: "base_footprint"   # 重力对齐坐标系（z 轴与重力方向一致）；留空则使用传感器坐标系
 
     latch: false                # 是否对输出话题启用 latch（新订阅者可收到最近一帧）
-    visualize: false            # 是否可视化分割结果（仅建议调试时开启）
+    visualize: true            # 是否可视化分割结果（仅建议调试时开启）
 
     input_topic: "livox/lidar/pointcloud"       # 输入点云话题
     obstacle_output_topic: "segmentation/obstacle" # 障碍物点云输出话题
