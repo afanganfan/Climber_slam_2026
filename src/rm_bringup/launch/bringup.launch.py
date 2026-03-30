@@ -32,28 +32,6 @@ def generate_launch_description():
     )
     node_params = os.path.join(
         get_package_share_directory('rm_bringup'), 'config', 'node_params.yaml')
-    # 以下是您现有的注释代码，我已经在每个节点添加了命名空间参数
-    # 如果您取消注释这些代码，请确保添加 namespace=namespace 参数
-    # if launch_params['video_play']:
-    #     image_node = ComposableNode(
-    #         package='rm_camera_driver',
-    #         plugin='fyt::camera_driver::VideoPlayerNode',
-    #         name='video_player',
-    #         namespace=namespace,  # 添加命名空间
-    #         parameters=[node_params],
-    #         extra_arguments=[{'use_intra_process_comms': True}]
-    #     )
-    # else:
-    #     image_node = ComposableNode(
-    #         package='rm_camera_driver',
-    #         plugin='fyt::camera_driver::DahengCameraNode',
-    #         name='camera_driver',
-    #         namespace=namespace,  # 添加命名空间
-    #         parameters=[node_params],
-    #         extra_arguments=[{'use_intra_process_comms': True}]
-    #     )
-    # 串口部分和其他注释代码也需要类似修改
-    # 创建启动描述
     ld = LaunchDescription()
     # 添加命名空间参数
     ld.add_action(namespace_arg)

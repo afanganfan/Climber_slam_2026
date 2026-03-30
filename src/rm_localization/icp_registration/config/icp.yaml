@@ -1,16 +1,16 @@
 /icp_registration:
   ros__parameters:
-    use_sim_time: false 
-    rough_leaf_size: 0.4
-    refine_leaf_size: 0.1
-    pcd_path: "/home/nucshao/Climber_slam_2026/src/rm_nav_bringup/PCD/RMUL2.pcd"
-    map_frame_id: "map"
-    odom_frame_id: "odom"
-    laser_frame_id: "livox_frame"
-    pointcloud_topic: "/livox/lidar/pointcloud"
-    thresh: 0.1
-    xy_offset: 0.2
-    yaw_offset: 30.0
-    yaw_resolution: 10.0
+    use_sim_time: false   # 是否使用仿真时间（true 使用 /clock，false 使用系统实时时间）
+    rough_leaf_size: 0.4  # 粗配准体素滤波尺寸（单位：米），值越大下采样越强、速度越快
+    refine_leaf_size: 0.1 # 精配准体素滤波尺寸（单位：米），值越小细节越多、计算量更大
+    pcd_path: "/home/nucshao/Climber_slam_2026/src/rm_nav_bringup/PCD/RMUL2.pcd" # 地图点云 PCD 文件路径
+    map_frame_id: "map" # 全局地图坐标系名称
+    odom_frame_id: "odom" # 里程计坐标系名称（局部连续坐标系）
+    laser_frame_id: "livox_frame" # 激光雷达坐标系名称（传感器自身坐标系）
+    pointcloud_topic: "/livox/lidar/pointcloud" # 输入实时点云话题
+    thresh: 0.1           # ICP 收敛阈值/匹配误差阈值（越小越严格）
+    xy_offset: 0.2        # 初值搜索时 x/y 平移扰动范围（单位：米）
+    yaw_offset: 30.0      # 初值搜索时偏航角扰动范围（单位：度）
+    yaw_resolution: 10.0  # 偏航角搜索步长（单位：度）
     # 机器人相对地图顺时针旋转 90°：yaw = -pi/2
-    initial_pose: [0.0, 0.0, 0.0, 0.0, 0.0, -1.57079632679] # x,y,z,roll,pitch,yaw
+    initial_pose: [0.0, 0.0, 0.0, 0.0, 0.0, -1.57079632679] # 初始位姿 [x,y,z,roll,pitch,yaw]（位置单位：米；角度单位：弧度）

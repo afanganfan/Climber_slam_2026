@@ -3,17 +3,24 @@
 
   <!-- Base links -->
   <link name="livox_frame" />
+  <link name="gimbal_link" />
   <link name="base_link" />
   <link name="base_footprint" />
 
   <!-- Base joints -->
-  <joint name="base_joint" type="fixed">
-    <origin xyz="-0.22 -0.11 0.12" rpy="0 0 0" />
+  <joint name="livox_to_gimbal_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
     <parent link="livox_frame" />
-    <child link="base_link" />
+    <child link="gimbal_link" />
     <axis xyz="0 0 0" />
   </joint>
-  
+
+  <joint name="base_joint" type="fixed">
+    <parent link="gimbal_link"/>
+    <child link="base_link" />
+    <origin xyz="-0.22 -0.11 0.12" rpy="0 0 0"/>
+  </joint>
+
   <joint name="base_footprint_joint" type="fixed">
     <parent link="base_link"/>
     <child link="base_footprint" />

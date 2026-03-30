@@ -34,7 +34,7 @@ amcl:
     save_pose_rate: 0.5                          # 保存姿态的频率 (Hz)
     sigma_hit: 0.2                               # 激光测量命中的标准差 (m)
     tf_broadcast: true                           # 是否广播tf变换
-    set_initial_pose: true                      # 启动时使用初始位姿，避免 map 框架缺失
+    set_initial_pose: true                       # 启动时使用初始位姿，避免 map 框架缺失
     initial_pose:
       x: 0.0
       y: 0.0

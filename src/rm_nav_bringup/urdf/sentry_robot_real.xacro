@@ -13,8 +13,8 @@
     </inertial>
   </xacro:macro>
 
-  <!-- base_link to livox_frame -->
-  <xacro:arg name="xyz" default="0.0 0.045 0.49" />
+  <!-- base_link to gimbal_link -->
+  <xacro:arg name="xyz" default="0.0 0.045 0.35" />
   <xacro:arg name="rpy" default="0 0 0" />
   
   <link name="base_link">
@@ -34,6 +34,25 @@
       <origin rpy="0 0 ${PI/2}" xyz="0 0 0.05"/>
     </collision>
     <xacro:default_inertial mass="8.2"/>
+  </link>
+
+  <link name="gimbal_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.04" length="0.06"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="silver">
+        <color rgba="0.8 0.8 0.8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.04" length="0.06"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+    <xacro:default_inertial mass="0.6"/>
   </link>
 
   <link name="wheel_1">
@@ -153,9 +172,15 @@
     </visual>
   </link>
 
-  <joint name="livox_joint" type="fixed">
+  <joint name="base_to_gimbal" type="fixed">
     <origin xyz="$(arg xyz)" rpy="$(arg rpy)" />
     <parent link="base_link"/>
+    <child link="gimbal_link"/>
+  </joint>
+
+  <joint name="livox_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="gimbal_link"/>
     <child link="livox_frame"/>
   </joint>
 

@@ -5,13 +5,10 @@ export ROS_LOCALHOST_ONLY=1
 
 cmds=(
 	"colcon build --symlink-install"
-	#"sudo chmod 666 /dev/tty*"
 	"ros2 launch rm_bringup bringup.launch.py"
 	"ros2 launch livox_ros_driver2 msg_MID360_launch.py"
 	"ros2 launch imu_complementary_filter complementary_filter.launch.py"
-	#"ros2 launch rplidar_ros rplidar_a2m7_launch.py"
 	"ros2 launch linefit_ground_segmentation_ros segmentation.launch.py"
-	# Delay FAST-LIO until LiDAR + IMU streams are ready.
 	"sleep 3; ros2 launch fast_lio mapping.launch.py"
 	"ros2 launch pointcloud_to_laserscan pointcloud_to_laserscan_launch.py"
 	"ros2 launch icp_registration icp.launch.py"
@@ -20,7 +17,6 @@ cmds=(
 	ros2 run rm_communication talker"
 	"ros2 topic echo cmd_vel_nav"
 	"ros2 run rm_communication sub_from_nav"
-	# "sleep 4 && python3 src/rm_navigation/scripts/send_waypoints.py"
 )
 
 work_dir="/home/nucshao/Climber_slam_2026/"

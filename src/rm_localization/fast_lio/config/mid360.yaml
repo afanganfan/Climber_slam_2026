@@ -1,42 +1,40 @@
 /**:
     ros__parameters:
-        map_file_path: "./test.pcd"
+        map_file_path: "./test.pcd"   # 先验地图/点云地图文件路径（用于定位或建图初始化）
         common:
-            lid_topic:  "/livox/lidar"
-            imu_topic:  "/imu/data"
-            time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
-            time_offset_lidar_to_imu: 0.0 # Time offset between lidar and IMU calibrated by other algorithms, e.g. LI-Init (can be found in README).
-                                        # This param will take effect no matter what time_sync_en is. So if the time offset is not known exactly, please set as 0.0
+            lid_topic:  "/livox/lidar" # LiDAR 点云话题名
+            imu_topic:  "/imu/data"    # IMU 数据话题名
+            time_sync_en: false          # 是否启用软件时间同步（仅在无法做硬件/外部时间同步时开启）
+            time_offset_lidar_to_imu: 0.0 # LiDAR 相对 IMU 的时间偏移（单位：秒），该值始终生效；未知时建议设为 0.0
 
         preprocess:
-            lidar_type: 1                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 4 for any other pointcloud input
-            scan_line:  4
-            blind: 2.0
-            timestamp_unit: 3
-            scan_rate: 10
+            lidar_type: 1                # 雷达类型：1=Livox，2=Velodyne，3=Ouster，4=其他通用点云输入
+            scan_line:  4                # 雷达线数（用于按线组织/预处理点云）
+            blind: 2.0                   # 盲区半径（单位：米），小于该距离的点将被过滤
+            timestamp_unit: 3            # 点时间戳单位：通常 0=秒，1=毫秒，2=微秒，3=纳秒（按驱动输出匹配）
+            scan_rate: 10                # 雷达扫描频率（单位：Hz）
 
         mapping:
-            acc_cov: 0.1
-            gyr_cov: 0.1
-            b_acc_cov: 0.0001
-            b_gyr_cov: 0.0001
-            fov_degree:    360.0
-            det_range:     450.0
-            extrinsic_est_en:  false      # true: enable the online estimation of IMU-LiDAR extrinsic
-            extrinsic_T: [ -0.011, -0.0234, 0.044 ]
-            extrinsic_R: [ 1., 0., 0.,
+            acc_cov: 0.1                 # 加速度计测量噪声协方差
+            gyr_cov: 0.1                 # 陀螺仪测量噪声协方差
+            b_acc_cov: 0.0001            # 加速度计零偏随机游走协方差
+            b_gyr_cov: 0.0001            # 陀螺仪零偏随机游走协方差
+            fov_degree:    360.0         # 传感器视场角（单位：度）
+            det_range:     450.0         # 最大有效探测距离（单位：米）
+            extrinsic_est_en:  false     # 是否在线估计 IMU-LiDAR 外参（true=在线估计，false=使用下方固定外参）
+            extrinsic_T: [ -0.011, -0.0234, 0.044 ] # IMU 到 LiDAR 的平移外参 [x, y, z]（单位：米）
+            extrinsic_R: [ 1., 0., 0.,   # IMU 到 LiDAR 的旋转外参（3x3 旋转矩阵，按行展开）
                             0., 1., 0.,
                             0., 0., 1.]
 
         publish:
-            path_en: false                # true: publish Path
-            effect_map_en: true         # true: publish Effects
-            map_en: true                 # true: publish Map cloud
-            scan_publish_en:  true       # false: close all the point cloud output
-            dense_publish_en: false      # false: low down the points number in a global-frame point clouds scan.
-            scan_bodyframe_pub_en: true  # true: output the point cloud scans in IMU-body-frame
+            path_en: false               # 是否发布轨迹 Path
+            effect_map_en: true          # 是否发布局部有效特征点云（effect points）
+            map_en: true                 # 是否发布全局地图点云
+            scan_publish_en:  true       # 是否发布点云扫描结果（false 时关闭所有点云输出）
+            dense_publish_en: false      # 是否发布稠密点云（false 时降采样以减少带宽与计算开销）
+            scan_bodyframe_pub_en: true  # 是否发布 IMU 机体坐标系下的点云
 
         pcd_save:
-            pcd_save_en: true
-            interval: -1                 # how many LiDAR frames saved in each pcd file; 
-                                        # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
+            pcd_save_en: true            # 是否保存 PCD 文件
+            interval: -1                 # 每个 PCD 文件包含的 LiDAR 帧数；-1 表示全部帧写入一个文件（帧数过多可能导致内存占用过高）
