@@ -3,6 +3,12 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <cctype>
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -12,7 +18,7 @@
 namespace rm_communication
 {
 
-enum class ZoneMode : uint8_t { ATTACK = 1, MOVE = 2, DEFENSE = 3 };
+enum class ZoneMode : uint8_t { ATTACK = 1, MOVE = 2, DEFENSE = 3, SENSITIVE = 4 };
 
 struct RectZone
 {
@@ -22,8 +28,14 @@ struct RectZone
     double y_max{0.0};
     bool contains(double x, double y) const
     {
-        return x > x_min && x < x_max && y > y_min && y < y_max;
+        return x >= x_min && x <= x_max && y >= y_min && y <= y_max;
     }
+};
+
+struct ModeZone
+{
+    ZoneMode mode{ZoneMode::MOVE};
+    RectZone rect;
 };
 
 struct ModeDecisionParams
@@ -47,15 +59,18 @@ class ZoneModeSwitcher
 {
 public:
     ZoneModeSwitcher(rclcpp::Node *node,
-                     RectZone defense = RectZone{2.6, 5.9, -5.65, 2.3})
+                                         RectZone defense = RectZone{2.6, 5.9, -5.65, 2.3},
+                                         const std::string &zone_config_path = "")
         : node_(node), 
           tf_buffer_(std::make_shared<tf2_ros::Buffer>(node_->get_clock())),
           tf_listener_(*tf_buffer_), 
           defense_zone_(defense),
+                    zone_config_path_(zone_config_path),
           last_blood_(400),
           last_match_time_(300)
     {
         current_mode_ = ZoneMode::MOVE;
+                load_zone_config();
         RCLCPP_INFO(node_->get_logger(), "ZoneModeSwitcher initialized");
     }
 
@@ -63,6 +78,27 @@ public:
     {
         DecisionResult result;
         ZoneMode new_mode = current_mode_;
+
+        ZoneMode zone_mode = ZoneMode::MOVE;
+        if (resolve_zone_mode(params.robot_x, params.robot_y, zone_mode))
+        {
+            new_mode = zone_mode;
+            result.has_nav_goal = false;
+
+            last_blood_ = params.our_sentry_blood;
+            last_match_time_ = params.match_time;
+
+            if (new_mode != current_mode_)
+            {
+                RCLCPP_INFO(node_->get_logger(),
+                            "Mode Changed: %d -> %d | Blood: %u",
+                            static_cast<int>(current_mode_), static_cast<int>(new_mode),
+                            params.our_sentry_blood);
+                current_mode_ = new_mode;
+            }
+            result.mode = current_mode_;
+            return result;
+        }
 
         constexpr double attack_x = 4.32;
         constexpr double attack_y = -1.63;
@@ -193,10 +229,150 @@ public:
     uint8_t current_mode_byte() const { return static_cast<uint8_t>(current_mode_); }
 
 private:
+    static std::string trim(const std::string &value)
+    {
+        const auto start = value.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos)
+            return "";
+        const auto end = value.find_last_not_of(" \t\r\n");
+        return value.substr(start, end - start + 1);
+    }
+
+    static std::string to_lower(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return value;
+    }
+
+    static bool parse_mode(const std::string &mode_name, ZoneMode &mode)
+    {
+        const std::string mode_str = to_lower(trim(mode_name));
+        if (mode_str == "attack")
+        {
+            mode = ZoneMode::ATTACK;
+            return true;
+        }
+        if (mode_str == "defense")
+        {
+            mode = ZoneMode::DEFENSE;
+            return true;
+        }
+        if (mode_str == "sensitive")
+        {
+            mode = ZoneMode::SENSITIVE;
+            return true;
+        }
+        if (mode_str == "move")
+        {
+            mode = ZoneMode::MOVE;
+            return true;
+        }
+        return false;
+    }
+
+    void load_zone_config()
+    {
+        zones_.clear();
+        if (zone_config_path_.empty())
+        {
+            RCLCPP_WARN(node_->get_logger(), "zone_config_path is empty, using fallback rules only.");
+            return;
+        }
+
+        std::ifstream input(zone_config_path_);
+        if (!input.is_open())
+        {
+            RCLCPP_WARN(node_->get_logger(),
+                        "Failed to open zone config: %s, using fallback rules only.",
+                        zone_config_path_.c_str());
+            return;
+        }
+
+        std::string line;
+        size_t line_no = 0;
+        while (std::getline(input, line))
+        {
+            ++line_no;
+            line = trim(line);
+            if (line.empty() || line[0] == '#')
+                continue;
+
+            std::string lower = to_lower(line);
+            if (line_no == 1 && lower.find("mode") != std::string::npos)
+                continue;
+
+            std::stringstream ss(line);
+            std::string mode_str;
+            std::string x_min_str;
+            std::string x_max_str;
+            std::string y_min_str;
+            std::string y_max_str;
+
+            if (!std::getline(ss, mode_str, ',') ||
+                !std::getline(ss, x_min_str, ',') ||
+                !std::getline(ss, x_max_str, ',') ||
+                !std::getline(ss, y_min_str, ',') ||
+                !std::getline(ss, y_max_str, ','))
+            {
+                RCLCPP_WARN(node_->get_logger(), "Invalid zone line %zu: %s", line_no, line.c_str());
+                continue;
+            }
+
+            ZoneMode mode;
+            if (!parse_mode(mode_str, mode))
+            {
+                RCLCPP_WARN(node_->get_logger(), "Unknown mode at line %zu: %s", line_no, mode_str.c_str());
+                continue;
+            }
+
+            try
+            {
+                ModeZone zone;
+                zone.mode = mode;
+                zone.rect.x_min = std::stod(trim(x_min_str));
+                zone.rect.x_max = std::stod(trim(x_max_str));
+                zone.rect.y_min = std::stod(trim(y_min_str));
+                zone.rect.y_max = std::stod(trim(y_max_str));
+
+                if (zone.rect.x_min > zone.rect.x_max)
+                    std::swap(zone.rect.x_min, zone.rect.x_max);
+                if (zone.rect.y_min > zone.rect.y_max)
+                    std::swap(zone.rect.y_min, zone.rect.y_max);
+
+                zones_.push_back(zone);
+            }
+            catch (const std::exception &)
+            {
+                RCLCPP_WARN(node_->get_logger(), "Invalid numeric value at line %zu: %s", line_no, line.c_str());
+            }
+        }
+
+        RCLCPP_INFO(node_->get_logger(),
+                    "Loaded %zu mode zones from %s",
+                    zones_.size(), zone_config_path_.c_str());
+    }
+
+    bool resolve_zone_mode(double x, double y, ZoneMode &mode) const
+    {
+        for (const auto &zone : zones_)
+        {
+            if (zone.rect.contains(x, y))
+            {
+                mode = zone.mode;
+                return true;
+            }
+        }
+        return false;
+    }
+
     rclcpp::Node *node_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
     RectZone defense_zone_;
+    std::string zone_config_path_;
+    std::vector<ModeZone> zones_;
     ZoneMode current_mode_;
 
     uint16_t last_blood_;

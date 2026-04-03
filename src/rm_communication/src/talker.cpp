@@ -7,10 +7,12 @@ ReceiveNode::ReceiveNode() : Node("talker"), is_serial_open_(false)
     this->declare_parameter("port_name", "/dev/ttySLAM");
     this->declare_parameter("baud_rate", 115200);
     this->declare_parameter("data_type", DATA_TYPE_THREE);
+    this->declare_parameter("zone_config_path", "src/rm_communication/config/zone_modes.csv");
 
     port_name_ = this->get_parameter("port_name").as_string();
     baud_rate_ = this->get_parameter("baud_rate").as_int();
     data_type_ = this->get_parameter("data_type").as_string();
+    const auto zone_config_path = this->get_parameter("zone_config_path").as_string();
 
     serial_port_.setPort(port_name_);
     serial_port_.setBaudrate(baud_rate_);
@@ -26,13 +28,16 @@ ReceiveNode::ReceiveNode() : Node("talker"), is_serial_open_(false)
         10ms, std::bind(&ReceiveNode::timer_callback, this));
 
     // 初始化区域模式切换器
-    zone_switcher_ = std::make_shared<rm_communication::ZoneModeSwitcher>(this);
+    zone_switcher_ = std::make_shared<rm_communication::ZoneModeSwitcher>(
+        this,
+        rm_communication::RectZone{2.6, 5.9, -5.65, 2.3},
+        zone_config_path);
     mode_params_ = rm_communication::ModeDecisionParams();
     last_idle_cmd_send_time_ = this->now();
     last_nav_goal_send_time_ = this->now();
 
-    RCLCPP_INFO(this->get_logger(), "Node initialized. Port: %s, Mode: %s",
-                port_name_.c_str(), data_type_.c_str());
+    RCLCPP_INFO(this->get_logger(), "Node initialized. Port: %s, Mode: %s, zone_config: %s",
+                port_name_.c_str(), data_type_.c_str(), zone_config_path.c_str());
 }
 
 // --- 析构函数实现 ---

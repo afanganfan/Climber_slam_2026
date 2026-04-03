@@ -78,6 +78,17 @@ install(DIRECTORY
   FILES_MATCHING PATTERN "*.hpp"
 )
 
+install(PROGRAMS
+  scripts/zone_map_editor.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  config/
+  DESTINATION share/${PROJECT_NAME}/config
+  FILES_MATCHING PATTERN "*.csv"
+)
+
 # 6. 测试与打包
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -1,5 +1,9 @@
 # nav2_params.yaml 参数修改记录（待验证）
 
+## 2026赛季 MPPI 与目标点 Wrapper
+
+详见：`MPPI_WRAPPER_TUNING_2026.md`
+
 ## 解决问题
 
 ### 1. 避障功能：
