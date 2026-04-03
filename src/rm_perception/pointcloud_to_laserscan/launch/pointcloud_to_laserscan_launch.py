@@ -18,7 +18,7 @@ def generate_launch_description():
             parameters=[{
                 'target_frame': 'livox_frame',      # 目标坐标系：输出 LaserScan 所在的 TF 坐标系
                 'transform_tolerance': 0.01,        # TF 变换容忍时间（秒），用于等待/插值坐标变换
-                'min_height': -1.0,                 # 点云高度下限（米），低于该值的点会被过滤
+                'min_height': -0.35,                 # 点云高度下限（米），低于该值的点会被过滤
                 'max_height': 0.25,                 # 点云高度上限（米），高于该值的点会被过滤
                 'angle_min': -3.14159,              # 扫描起始角（弧度）
                 'angle_max': 3.14159,               # 扫描结束角（弧度）
