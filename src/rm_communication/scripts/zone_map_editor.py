@@ -12,6 +12,12 @@ MODE_COLOR = {
     "sensitive": (0, 255, 0),
 }
 
+MODE_PRIORITY = {
+    "attack": 100,
+    "defense": 300,
+    "sensitive": 200,
+}
+
 
 def parse_map_yaml(yaml_path: Path):
     resolution = None
@@ -71,6 +77,7 @@ def load_zones(csv_path: Path):
                     "x_max": float(row["x_max"]),
                     "y_min": float(row["y_min"]),
                     "y_max": float(row["y_max"]),
+                    "priority": int(row.get("priority", MODE_PRIORITY[mode])),
                 }
             )
     return zones
@@ -79,7 +86,10 @@ def load_zones(csv_path: Path):
 def save_zones(csv_path: Path, zones):
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_path.open("w", encoding="utf-8", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=["mode", "x_min", "x_max", "y_min", "y_max"])
+        writer = csv.DictWriter(
+            file,
+            fieldnames=["mode", "x_min", "x_max", "y_min", "y_max", "priority"],
+        )
         writer.writeheader()
         for zone in zones:
             writer.writerow(zone)
@@ -199,6 +209,7 @@ def main():
             for x1, y1, x2, y2, mode in zones_px:
                 rect = rect_px_to_map((x1, y1, x2, y2), height, resolution, origin)
                 rect["mode"] = mode
+                rect["priority"] = MODE_PRIORITY[mode]
                 map_zones.append(rect)
             save_zones(out_path, map_zones)
             print(f"已保存 {len(map_zones)} 个区域到: {out_path}")

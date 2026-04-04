@@ -36,6 +36,8 @@ struct ModeZone
 {
     ZoneMode mode{ZoneMode::MOVE};
     RectZone rect;
+    int priority{0};
+    size_t order{0};
 };
 
 struct ModeDecisionParams
@@ -44,7 +46,11 @@ struct ModeDecisionParams
     double robot_y{0.0};
     uint16_t our_sentry_blood{400};
     uint32_t match_time{300};
-    uint16_t enemy_sentry_blood{260}; 
+    uint16_t enemy_sentry_blood{260};
+    // 当上位机协议提供热量时置为 true，并填写 sentry_heat / heat_limit。
+    bool has_heat{false};
+    uint16_t sentry_heat{0};
+    uint16_t heat_limit{200};
 };
 
 struct DecisionResult
@@ -79,27 +85,6 @@ public:
         DecisionResult result;
         ZoneMode new_mode = current_mode_;
 
-        ZoneMode zone_mode = ZoneMode::MOVE;
-        if (resolve_zone_mode(params.robot_x, params.robot_y, zone_mode))
-        {
-            new_mode = zone_mode;
-            result.has_nav_goal = false;
-
-            last_blood_ = params.our_sentry_blood;
-            last_match_time_ = params.match_time;
-
-            if (new_mode != current_mode_)
-            {
-                RCLCPP_INFO(node_->get_logger(),
-                            "Mode Changed: %d -> %d | Blood: %u",
-                            static_cast<int>(current_mode_), static_cast<int>(new_mode),
-                            params.our_sentry_blood);
-                current_mode_ = new_mode;
-            }
-            result.mode = current_mode_;
-            return result;
-        }
-
         constexpr double attack_x = 4.32;
         constexpr double attack_y = -1.63;
         constexpr double defense_x = -1.05;
@@ -131,8 +116,61 @@ public:
         const bool at_patrol_target =
             dist_sq(params.robot_x, params.robot_y, patrol_target_x, patrol_target_y) <= arrive_dist_sq;
 
-        // 规则1：血量 >= 350 -> 先去进攻点，达到后开始巡航
-        if (params.our_sentry_blood >= 350)
+        bool state_rule_matched = false;
+        int state_rule_priority = -1;
+
+        const auto apply_state_rule = [&](int priority,
+                                          ZoneMode mode,
+                                          bool has_goal,
+                                          double gx,
+                                          double gy) {
+            if (priority > state_rule_priority)
+            {
+                state_rule_priority = priority;
+                state_rule_matched = true;
+                new_mode = mode;
+                result.has_nav_goal = has_goal;
+                result.goal_x = gx;
+                result.goal_y = gy;
+            }
+        };
+
+        // 优先级 P1000：低血量或高热量，强制防御。
+        const bool low_blood = params.our_sentry_blood < 100;
+        const bool high_heat = params.has_heat && (params.sentry_heat >= params.heat_limit);
+        if (low_blood || high_heat)
+        {
+            patrol_initialized_ = false;
+            attack_reached_ = false;
+            if (at_defense_point)
+            {
+                apply_state_rule(1000, ZoneMode::DEFENSE, false, 0.0, 0.0);
+            }
+            else
+            {
+                apply_state_rule(1000, ZoneMode::DEFENSE, true, defense_x, defense_y);
+            }
+        }
+
+        // 优先级 P900：比赛末段且血量不高，转保守防守。
+        if (params.match_time <= 60 && params.our_sentry_blood < 220)
+        {
+            patrol_initialized_ = false;
+            attack_reached_ = false;
+            if (at_defense_point)
+            {
+                apply_state_rule(900, ZoneMode::DEFENSE, false, 0.0, 0.0);
+            }
+            else
+            {
+                apply_state_rule(900, ZoneMode::DEFENSE, true, defense_x, defense_y);
+            }
+        }
+
+        // 优先级 P800：高血量且热量安全，先打进攻点，再做双点巡航。
+        const bool heat_safe_for_attack = !params.has_heat ||
+                                          (params.sentry_heat + 20u < params.heat_limit);
+        if (params.our_sentry_blood >= 350 && heat_safe_for_attack)
         {
             if (!attack_reached_)
             {
@@ -144,48 +182,46 @@ public:
                 }
                 else
                 {
-                    new_mode = ZoneMode::ATTACK;
-                    result.has_nav_goal = true;
-                    result.goal_x = attack_x;
-                    result.goal_y = attack_y;
-                    goto finalize;
+                    apply_state_rule(800, ZoneMode::ATTACK, true, attack_x, attack_y);
                 }
             }
 
-            // 已到达过进攻点：开始巡航
-            new_mode = ZoneMode::MOVE;
-
-            if (at_patrol_target)
+            if (attack_reached_)
             {
-                patrol_target_index_ = 1 - patrol_target_index_;
-                patrol_target_x = (patrol_target_index_ == 0) ? patrol_a_x : patrol_b_x;
-                patrol_target_y = (patrol_target_index_ == 0) ? patrol_a_y : patrol_b_y;
-            }
+                // 已到达过进攻点：开始巡航
+                if (at_patrol_target)
+                {
+                    patrol_target_index_ = 1 - patrol_target_index_;
+                    patrol_target_x = (patrol_target_index_ == 0) ? patrol_a_x : patrol_b_x;
+                    patrol_target_y = (patrol_target_index_ == 0) ? patrol_a_y : patrol_b_y;
+                }
 
-            result.has_nav_goal = true;
-            result.goal_x = patrol_target_x;
-            result.goal_y = patrol_target_y;
+                apply_state_rule(800, ZoneMode::MOVE, true, patrol_target_x, patrol_target_y);
+            }
         }
-        // 规则2：血量 < 100 -> 回防御点
-        else if (params.our_sentry_blood < 100)
+
+        // 优先级 P700：对方血量明显更低时，积极进攻。
+        if (params.our_sentry_blood > (params.enemy_sentry_blood + 80u) &&
+            params.our_sentry_blood >= 180 &&
+            heat_safe_for_attack)
         {
-            new_mode = ZoneMode::DEFENSE;
-            patrol_initialized_ = false;
-            attack_reached_ = false;
+            apply_state_rule(700, ZoneMode::ATTACK, true, attack_x, attack_y);
+        }
 
-            if (at_defense_point)
+        // 状态规则未命中时，才进入坐标区域规则（同样按区域优先级解析）。
+        if (!state_rule_matched)
+        {
+            ZoneMode zone_mode = ZoneMode::MOVE;
+            if (resolve_zone_mode(params.robot_x, params.robot_y, zone_mode))
             {
+                new_mode = zone_mode;
                 result.has_nav_goal = false;
-            }
-            else
-            {
-                result.has_nav_goal = true;
-                result.goal_x = defense_x;
-                result.goal_y = defense_y;
+                state_rule_matched = true;
             }
         }
-        // 其它情况：不下发导航目标
-        else
+
+        // 最终兜底：状态和区域都未命中，维持攻击姿态但不下发导航点。
+        if (!state_rule_matched)
         {
             new_mode = ZoneMode::ATTACK;
             result.has_nav_goal = false;
@@ -193,7 +229,6 @@ public:
             attack_reached_ = false;
         }
 
-    finalize:
         // 更新状态记录
         last_blood_ = params.our_sentry_blood;
         last_match_time_ = params.match_time;
@@ -272,6 +307,27 @@ private:
         return false;
     }
 
+    static int default_priority_for_mode(ZoneMode mode)
+    {
+        switch (mode)
+        {
+        case ZoneMode::DEFENSE:
+            return 300;
+        case ZoneMode::SENSITIVE:
+            return 200;
+        case ZoneMode::ATTACK:
+            return 100;
+        case ZoneMode::MOVE:
+        default:
+            return 0;
+        }
+    }
+
+    static double rect_area(const RectZone &rect)
+    {
+        return std::max(0.0, rect.x_max - rect.x_min) * std::max(0.0, rect.y_max - rect.y_min);
+    }
+
     void load_zone_config()
     {
         zones_.clear();
@@ -309,6 +365,7 @@ private:
             std::string x_max_str;
             std::string y_min_str;
             std::string y_max_str;
+            std::string priority_str;
 
             if (!std::getline(ss, mode_str, ',') ||
                 !std::getline(ss, x_min_str, ',') ||
@@ -335,6 +392,17 @@ private:
                 zone.rect.x_max = std::stod(trim(x_max_str));
                 zone.rect.y_min = std::stod(trim(y_min_str));
                 zone.rect.y_max = std::stod(trim(y_max_str));
+                zone.order = zones_.size();
+                zone.priority = default_priority_for_mode(mode);
+
+                if (std::getline(ss, priority_str, ','))
+                {
+                    const std::string p = trim(priority_str);
+                    if (!p.empty())
+                    {
+                        zone.priority = std::stoi(p);
+                    }
+                }
 
                 if (zone.rect.x_min > zone.rect.x_max)
                     std::swap(zone.rect.x_min, zone.rect.x_max);
@@ -356,13 +424,48 @@ private:
 
     bool resolve_zone_mode(double x, double y, ZoneMode &mode) const
     {
+        const ModeZone *best_zone = nullptr;
         for (const auto &zone : zones_)
         {
             if (zone.rect.contains(x, y))
             {
-                mode = zone.mode;
-                return true;
+                if (best_zone == nullptr)
+                {
+                    best_zone = &zone;
+                    continue;
+                }
+
+                if (zone.priority > best_zone->priority)
+                {
+                    best_zone = &zone;
+                    continue;
+                }
+
+                if (zone.priority == best_zone->priority)
+                {
+                    const double zone_area = rect_area(zone.rect);
+                    const double best_area = rect_area(best_zone->rect);
+
+                    // 同优先级时，面积更小的区域更具体，优先命中。
+                    if (zone_area < best_area)
+                    {
+                        best_zone = &zone;
+                        continue;
+                    }
+
+                    // 若面积也相同，后定义的区域覆盖前定义区域。
+                    if (zone_area == best_area && zone.order > best_zone->order)
+                    {
+                        best_zone = &zone;
+                    }
+                }
             }
+        }
+
+        if (best_zone != nullptr)
+        {
+            mode = best_zone->mode;
+            return true;
         }
         return false;
     }

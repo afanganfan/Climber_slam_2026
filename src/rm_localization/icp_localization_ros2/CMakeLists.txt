@@ -11,10 +11,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(-O3)
 # find dependencies
 find_package(ament_cmake_auto REQUIRED)
+find_package(libpointmatcher REQUIRED)
 
 ament_auto_find_build_dependencies()
 ament_auto_add_executable(icp_localization 
   DIRECTORY src)
+
+target_include_directories(icp_localization PRIVATE
+  ${libpointmatcher_INCLUDE_DIRS}
+)
+
+target_link_libraries(icp_localization
+  ${libpointmatcher_LIBRARIES}
+)
 
 
 # uncomment the following section in order to fill in

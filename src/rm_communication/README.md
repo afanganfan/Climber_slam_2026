@@ -15,11 +15,16 @@ pip install opencv-python
 示例（在工作区根目录执行）：
 
 ```bash
-python src/rm_communication/scripts/zone_map_editor.py \
+python3 src/rm_communication/scripts/zone_map_editor.py \
   --pgm "assets/7v7 1.pgm" \
   --map-yaml "assets/7v7.yaml" \
   --out "src/rm_communication/config/zone_modes.csv"
 ```
+
+说明：
+- `assets/7v7 1.pgm` 用于可视化画区。
+- `assets/7v7.yaml` 提供 `resolution/origin`，用于像素坐标到地图坐标换算。
+- `assets/7v7.pcd` 是点云地图文件，通常用于定位/建图链路，本工具不直接读取该文件。
 
 操作方式：
 - `1` 切换到 `attack`（红色）
@@ -45,3 +50,20 @@ ros2 run rm_communication talker --ros-args -p zone_config_path:="src/rm_communi
 
 - 机器人位姿落在任意画区内：优先采用区域模式（`attack/defense/sensitive`），并停止发送自动导航目标。
 - 不在任何画区内：沿用原有血量/时间驱动策略。
+- 当落入多个重叠区域时，按 `priority` 字段从大到小选择。
+- 若 `priority` 相同：优先选择面积更小的区域（更精细的局部策略）。
+- 若面积也相同：后定义（CSV中更靠后）的区域覆盖前定义区域。
+
+`zone_modes.csv` 支持 6 列格式（推荐）：
+
+```csv
+mode,x_min,x_max,y_min,y_max,priority
+attack,1.0,2.0,-1.0,0.5,100
+defense,1.2,1.8,-0.6,0.2,300
+sensitive,1.4,1.6,-0.3,0.1,200
+```
+
+兼容旧格式（5列无 `priority`），代码会使用默认优先级：
+- `defense=300`
+- `sensitive=200`
+- `attack=100`

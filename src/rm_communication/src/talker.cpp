@@ -359,6 +359,9 @@ void ReceiveNode::parse_three()
         mode_params_.our_sentry_blood = our_sentry_blood_val; // 哨兵血量
         mode_params_.enemy_sentry_blood = enemy_sentry_blood_val; // 敌方哨兵血量
         mode_params_.match_time = match_time_val;
+        mode_params_.has_heat = false; // 3V3 当前协议不含热量字段
+        mode_params_.sentry_heat = 0;
+        mode_params_.heat_limit = 200;
         
         // 同级决策：一次 update 同时得到“模式 + 导航目标”
         auto decision = zone_switcher_->update(mode_params_);
@@ -469,6 +472,9 @@ void ReceiveNode::parse_seven()
             mode_params_.robot_y = robot_y;
             mode_params_.our_sentry_blood = hp_val; // 自身血量
             mode_params_.match_time = time_val;
+            mode_params_.has_heat = true;
+            mode_params_.sentry_heat = bullet_num_val; // 若协议定义不同，请替换为真实热量字段
+            mode_params_.heat_limit = 200;
         
             auto decision = zone_switcher_->update(mode_params_);
             execute_mode_navigation(decision);
