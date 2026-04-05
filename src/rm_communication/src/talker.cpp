@@ -1,7 +1,5 @@
 #include "talker.hpp"
 
-using Action = nav2_msgs::action::NavigateToPose;
-
 ReceiveNode::ReceiveNode() : Node("talker"), is_serial_open_(false)
 {
     this->declare_parameter("port_name", "/dev/ttySLAM");
@@ -21,9 +19,9 @@ ReceiveNode::ReceiveNode() : Node("talker"), is_serial_open_(false)
 
     // 3. 创建发布者、订阅者、Action 客户端和定时器
     pub_ = this->create_publisher<std_msgs::msg::String>("communication_data", 10);
+    mission_event_pub_ = this->create_publisher<std_msgs::msg::String>("nav_mission_event", 10);
     cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
         "cmd_vel_nav", 10, std::bind(&ReceiveNode::cmd_vel_callback, this, std::placeholders::_1));
-    action_client_ = rclcpp_action::create_client<Action>(this, "navigate_to_pose");
     timer_ = this->create_wall_timer(
         10ms, std::bind(&ReceiveNode::timer_callback, this));
 
@@ -34,7 +32,7 @@ ReceiveNode::ReceiveNode() : Node("talker"), is_serial_open_(false)
         zone_config_path);
     mode_params_ = rm_communication::ModeDecisionParams();
     last_idle_cmd_send_time_ = this->now();
-    last_nav_goal_send_time_ = this->now();
+    last_mission_event_time_ = this->now();
 
     RCLCPP_INFO(this->get_logger(), "Node initialized. Port: %s, Mode: %s, zone_config: %s",
                 port_name_.c_str(), data_type_.c_str(), zone_config_path.c_str());
@@ -101,113 +99,49 @@ void ReceiveNode::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr ms
     send_cmd_packet(cached_vx_, cached_vy_, cached_vz_);
 }
 
-// --- send_navigation_goal 实现 (发送导航目标) ---
-void ReceiveNode::send_navigation_goal(double x, double y)
-{
-    if (!action_client_->wait_for_action_server(std::chrono::seconds(1)))
-    {
-        RCLCPP_WARN(this->get_logger(), "Navigate action server not available");
-        return;
-    }
-    auto goal_msg = Action::Goal();
-    geometry_msgs::msg::PoseStamped pose;
-    pose.header.frame_id = "map";
-    pose.header.stamp = this->now();
-    pose.pose.position.x = x;
-    pose.pose.position.y = y;
-    pose.pose.orientation.w = 1.0;
-    goal_msg.pose = pose;
-
-    nav_goal_inflight_ = true;
-    has_last_nav_goal_ = true;
-    last_nav_goal_x_ = x;
-    last_nav_goal_y_ = y;
-    last_nav_goal_send_time_ = this->now();
-
-    auto send_goal_options = rclcpp_action::Client<Action>::SendGoalOptions();
-    send_goal_options.goal_response_callback =
-        [this](rclcpp_action::ClientGoalHandle<Action>::SharedPtr goal_handle)
-    {
-        if (!goal_handle)
-        {
-            RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
-            nav_goal_inflight_ = false;
-        }
-        else
-        {
-            RCLCPP_INFO(this->get_logger(), "Goal accepted");
-        }
-    };
-    send_goal_options.feedback_callback =
-        [this](rclcpp_action::ClientGoalHandle<Action>::SharedPtr,
-               const std::shared_ptr<const Action::Feedback> feedback)
-    {
-        (void)feedback;
-        RCLCPP_DEBUG(this->get_logger(), "Navigation feedback");
-    };
-    send_goal_options.result_callback =
-        [this](const rclcpp_action::ClientGoalHandle<Action>::WrappedResult &result)
-    {
-        switch (result.code)
-        {
-        case rclcpp_action::ResultCode::SUCCEEDED:
-            RCLCPP_INFO(this->get_logger(), "Navigation succeeded");
-            has_nav_goal_active_ = false;
-            nav_goal_inflight_ = false;
-            break;
-        case rclcpp_action::ResultCode::ABORTED:
-            RCLCPP_ERROR(this->get_logger(), "Navigation aborted");
-            has_nav_goal_active_ = false;
-            nav_goal_inflight_ = false;
-            break;
-        case rclcpp_action::ResultCode::CANCELED:
-            RCLCPP_INFO(this->get_logger(), "Navigation canceled");
-            has_nav_goal_active_ = false;
-            nav_goal_inflight_ = false;
-            break;
-        default:
-            RCLCPP_ERROR(this->get_logger(), "Navigation unknown result");
-            has_nav_goal_active_ = false;
-            nav_goal_inflight_ = false;
-            break;
-        }
-    };
-
-    action_client_->async_send_goal(goal_msg, send_goal_options);
-}
-
 void ReceiveNode::execute_mode_navigation(const rm_communication::DecisionResult &decision)
 {
     has_nav_goal_active_ = decision.has_nav_goal;
 
-    // 导航与模式是同级决策：有目标就发，不再依赖“模式是否切换”
-    if (!decision.has_nav_goal)
+    std::string mission = "none";
+    if (decision.has_nav_goal)
     {
-        nav_goal_inflight_ = false;
-        return;
+        switch (decision.mode)
+        {
+        case rm_communication::ZoneMode::DEFENSE:
+            mission = "defense";
+            break;
+        case rm_communication::ZoneMode::ATTACK:
+            mission = "attack";
+            break;
+        case rm_communication::ZoneMode::MOVE:
+            mission = "patrol";
+            break;
+        case rm_communication::ZoneMode::SENSITIVE:
+        default:
+            mission = "none";
+            break;
+        }
     }
 
-    const bool same_goal = has_last_nav_goal_ &&
-                           (std::fabs(decision.goal_x - last_nav_goal_x_) < 0.05) &&
-                           (std::fabs(decision.goal_y - last_nav_goal_y_) < 0.05);
-
-    // 同一目标且仍在执行中：不重复发送
-    if (same_goal && nav_goal_inflight_)
-    {
-        return;
-    }
-
-    // 同一目标刚发送过：做最小重发间隔，避免高频触发 Nav2 中止
     const auto now = this->now();
-    if (same_goal && (now - last_nav_goal_send_time_).seconds() < 1.0)
+    const bool changed = !has_last_mission_event_ || (mission != last_mission_event_);
+    const bool heartbeat = (mission != "none") && ((now - last_mission_event_time_).seconds() >= 1.0);
+    if (!changed && !heartbeat)
     {
         return;
     }
 
-    RCLCPP_INFO(this->get_logger(),
-                "策略执行：mode=%d, 发送导航目标(%.2f, %.2f)",
-                static_cast<int>(decision.mode), decision.goal_x, decision.goal_y);
-    send_navigation_goal(decision.goal_x, decision.goal_y);
+    std_msgs::msg::String msg;
+    msg.data = mission;
+    mission_event_pub_->publish(msg);
+
+    has_last_mission_event_ = true;
+    last_mission_event_ = mission;
+    last_mission_event_time_ = now;
+
+    RCLCPP_INFO(this->get_logger(), "发布任务事件: %s (mode=%d)",
+                mission.c_str(), static_cast<int>(decision.mode));
 }
 
 void ReceiveNode::timer_callback()

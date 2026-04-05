@@ -67,3 +67,47 @@ sensitive,1.4,1.6,-0.3,0.1,200
 - `defense=300`
 - `sensitive=200`
 - `attack=100`
+
+## 4. 导航解耦：talker 与 nav_mission_manager
+
+当前架构已拆分为两部分：
+
+- `talker`：只负责串口通信、状态解析、模式决策，并发布任务事件 `nav_mission_event`。
+- `nav_mission_manager`：订阅任务事件，读取 CSV 路线，调用 `NavigateThroughPoses` 一次下发连续航点。
+
+### 任务事件映射
+
+- `attack`：前压路线
+- `patrol`：巡逻路线
+- `defense`：回防路线
+- `none`：取消当前导航任务
+
+### 路径 CSV
+
+默认路径文件：`src/rm_communication/config/nav_waypoints.csv`
+
+格式：
+
+```csv
+route,seq,x,y,yaw
+attack,1,4.32,-1.63,0.0
+patrol,1,3.42,-3.39,-1.57
+defense,1,-1.05,1.44,3.14
+```
+
+说明：
+- `route`：路线名，对应任务事件名。
+- `seq`：点序（当前实现按文件顺序读取，建议保持递增）。
+- `x,y,yaw`：地图坐标系下的目标位姿。
+
+### 启动示例
+
+```bash
+ros2 run rm_communication talker --ros-args \
+  -p data_type:=seven \
+  -p zone_config_path:=src/rm_communication/config/zone_modes.csv
+
+ros2 run rm_communication nav_mission_manager --ros-args \
+  -p waypoint_csv_path:=src/rm_communication/config/nav_waypoints.csv \
+  -p frame_id:=map
+```

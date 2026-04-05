@@ -32,12 +32,20 @@ ament_target_dependencies(talker
   std_msgs
   geometry_msgs
   serial
-  nav2_msgs
-  rclcpp_action
   tf2_ros
 )
 
-# 3.2 订阅导航消息节点
+# 3.2 导航任务管理节点（订阅任务事件 -> CSV航线 -> NavigateThroughPoses）
+add_executable(nav_mission_manager src/nav_mission_manager.cpp)
+ament_target_dependencies(nav_mission_manager
+  rclcpp
+  std_msgs
+  geometry_msgs
+  nav2_msgs
+  rclcpp_action
+)
+
+# 3.3 订阅导航消息节点
 add_executable(sub_from_nav src/sub_from_nav.cpp)
 ament_target_dependencies(sub_from_nav
   rclcpp
@@ -46,14 +54,14 @@ ament_target_dependencies(sub_from_nav
   nav2_msgs
 )
 
-# 3.3 serial_echo: simple node that prints raw serial data to terminal
+# 3.4 serial_echo: simple node that prints raw serial data to terminal
 add_executable(serial_echo src/serial_echo.cpp)
 ament_target_dependencies(serial_echo
   rclcpp
   serial
 )
 
-# 3.4 监听节点
+# 3.5 监听节点
 add_executable(lis src/lis.cpp)
 ament_target_dependencies(lis
   rclcpp
@@ -65,6 +73,7 @@ ament_target_dependencies(lis
 # 4. 安装所有可执行文件（合并为一个install命令，简洁）
 install(TARGETS
   talker
+  nav_mission_manager
   sub_from_nav
   serial_echo
   lis

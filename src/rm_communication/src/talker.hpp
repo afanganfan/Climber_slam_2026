@@ -13,9 +13,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "serial/serial.h"
 #include "geometry_msgs/msg/twist.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "nav2_msgs/action/navigate_to_pose.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 #include "rm_communication/zone_mode_switcher.hpp"
 
 using namespace std;
@@ -75,10 +72,10 @@ public:
 
 private:
     // ROS2 成员
-    rclcpp_action::Client<nav2_msgs::action::NavigateToPose>::SharedPtr action_client_;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mission_event_pub_;
 
     // 串口通信成员
     serial::Serial serial_port_;
@@ -99,12 +96,10 @@ private:
     int16_t cached_vz_{0};
     rclcpp::Time last_idle_cmd_send_time_;
 
-    // 导航目标去重与节流状态
-    bool nav_goal_inflight_{false};
-    bool has_last_nav_goal_{false};
-    double last_nav_goal_x_{0.0};
-    double last_nav_goal_y_{0.0};
-    rclcpp::Time last_nav_goal_send_time_;
+    // 任务事件去重与节流状态
+    bool has_last_mission_event_{false};
+    std::string last_mission_event_;
+    rclcpp::Time last_mission_event_time_;
     
     // 区域模式切换器和当前决策参数
     std::shared_ptr<rm_communication::ZoneModeSwitcher> zone_switcher_;
@@ -123,7 +118,6 @@ private:
     // 辅助函数
     uint8_t calc_checksum(const std::vector<uint8_t> &packet);
     void send_cmd_packet(int16_t vx, int16_t vy, int16_t vz);
-    void send_navigation_goal(double x, double y);
     void execute_mode_navigation(const rm_communication::DecisionResult &decision);
 };
 
